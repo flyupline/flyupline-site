@@ -2,7 +2,7 @@ import { useState } from 'react'
 import PageHero from '../components/PageHero.jsx'
 import Reveal from '../components/ui/Reveal.jsx'
 import { SuccessPanel, ErrorNotice } from '../components/booking/FormFeedback.jsx'
-import { ENDPOINTS, submitRequest } from '../lib/submitRequest.js'
+import { submitRequest } from '../lib/submitRequest.js'
 import usePageMeta from '../lib/usePageMeta.js'
 import { IconPhone, IconMail, IconClock } from '../components/ui/Icons.jsx'
 
@@ -18,7 +18,7 @@ export default function Contact() {
     if (status === 'sending') return
     setStatus('sending')
     try {
-      await submitRequest(ENDPOINTS.contact, e.target)
+      await submitRequest('Contact enquiry', e.target)
       setStatus('success')
     } catch {
       setStatus('error')
@@ -85,6 +85,7 @@ export default function Contact() {
                     </div>
                   </div>
                   <div className="form-foot" style={{ alignItems: 'flex-start' }}>
+                    <input type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ display: 'none' }} />
                     <button className="btn btn-primary btn-lg" type="submit" disabled={status === 'sending'}>
                       {status === 'sending' ? 'Sending...' : 'Send Message'}
                     </button>

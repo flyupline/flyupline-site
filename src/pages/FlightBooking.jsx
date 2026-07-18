@@ -5,7 +5,7 @@ import PassengerDropdown from '../components/booking/PassengerDropdown.jsx'
 import { DateRangeField, SingleDateField } from '../components/booking/DateField.jsx'
 import { SuccessPanel, ErrorNotice } from '../components/booking/FormFeedback.jsx'
 import Reveal from '../components/ui/Reveal.jsx'
-import { ENDPOINTS, submitRequest } from '../lib/submitRequest.js'
+import { submitRequest } from '../lib/submitRequest.js'
 import usePageMeta from '../lib/usePageMeta.js'
 import { IconShield, IconClock, IconTag, IconHeadset, IconPhone, IconMail, IconCheck, IconPlus, IconX } from '../components/ui/Icons.jsx'
 
@@ -51,6 +51,7 @@ function PersonalFields() {
 function FormFoot({ sending }) {
   return (
     <div className="form-foot">
+      <input type="checkbox" name="botcheck" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ display: 'none' }} />
       <button type="submit" className="btn btn-primary btn-lg" disabled={sending}>
         {sending ? 'Sending...' : 'Request My Quote'}
       </button>
@@ -83,7 +84,7 @@ function useQuoteForm(endpoint) {
 }
 
 function RoundtripForm() {
-  const { status, setStatus, onSubmit } = useQuoteForm(ENDPOINTS.roundtrip)
+  const { status, setStatus, onSubmit } = useQuoteForm('Roundtrip flight quote request')
   if (status === 'success') return <SuccessPanel onReset={() => setStatus('idle')} resetLabel="Request another quote" />
 
   return (
@@ -103,7 +104,7 @@ function RoundtripForm() {
 }
 
 function OnewayForm() {
-  const { status, setStatus, onSubmit } = useQuoteForm(ENDPOINTS.oneway)
+  const { status, setStatus, onSubmit } = useQuoteForm('One-way flight quote request')
   if (status === 'success') return <SuccessPanel onReset={() => setStatus('idle')} resetLabel="Request another quote" />
 
   return (
@@ -123,7 +124,7 @@ function OnewayForm() {
 }
 
 function MulticityForm() {
-  const { status, setStatus, onSubmit } = useQuoteForm(ENDPOINTS.multicity)
+  const { status, setStatus, onSubmit } = useQuoteForm('Multi-city flight quote request')
   const [extraTrip, setExtraTrip] = useState(false)
   if (status === 'success') return <SuccessPanel onReset={() => setStatus('idle')} resetLabel="Request another quote" />
 

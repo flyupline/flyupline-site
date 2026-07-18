@@ -1,18 +1,32 @@
-// Central place to configure where each form posts.
-// These match the endpoints the original FlyUp Line site used — point them
-// at your live handlers (PHP, serverless function, form service, ...) on deploy.
-export const ENDPOINTS = {
-  roundtrip: '/roundtrip.php',
-  oneway: '/oneway.php',
-  multicity: '/multicity.php',
-  contact: '/contact.php',
-}
+// Form delivery via Web3Forms — submissions land in flyupline.booking@gmail.com.
+// The access key is read at build time from VITE_WEB3FORMS_KEY (set in Vercel
+// project env). Get a key for free at https://web3forms.com — no account needed,
+// just verify the destination email. The key is public by design (frontend form).
+const ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || ''
 
-export async function submitRequest(endpoint, formElement) {
-  const data = new FormData(formElement)
-  const res = await fetch(endpoint, { method: 'POST', body: data })
-  if (!res.ok) {
-    throw new Error(`Request failed with status ${res.status}`)
+export const FORMS_CONFIGURED = Boolean(ACCESS_KEY)
+
+const ENDPOINT = 'https://api.web3forms.com/submit'
+
+export async function submitRequest(formType, formElement) {
+  if (!ACCESS_KEY) {
+    throw new Error('Forms are not configured yet (missing access key).')
   }
-  return res
+
+  const data = new FormData(formElement)
+  data.append('access_key', ACCESS_KEY)
+  data.append('subject', `New ${formType} — FlyUp Line website`)
+  data.append('from_name', 'FlyUp Line Website')
+
+  const res = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    body: data,
+  })
+
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || `Request failed (${res.status})`)
+  }
+  return json
 }
