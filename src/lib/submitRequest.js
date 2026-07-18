@@ -1,32 +1,29 @@
-// Form delivery via Web3Forms — submissions land in flyupline.booking@gmail.com.
-// The access key is read at build time from VITE_WEB3FORMS_KEY (set in Vercel
-// project env). Get a key for free at https://web3forms.com — no account needed,
-// just verify the destination email. The key is public by design (frontend form).
-const ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || ''
-
-export const FORMS_CONFIGURED = Boolean(ACCESS_KEY)
-
-const ENDPOINT = 'https://api.web3forms.com/submit'
+// Form delivery — posts submissions to our Vercel serverless function, which
+// stores them in Supabase and sends the branded team alert + customer
+// confirmation via Resend. See api/quote.js.
 
 export async function submitRequest(formType, formElement) {
-  if (!ACCESS_KEY) {
-    throw new Error('Forms are not configured yet (missing access key).')
+  const fd = new FormData(formElement)
+  const data = {}
+  for (const [key, value] of fd.entries()) {
+    if (key in data) {
+      if (Array.isArray(data[key])) data[key].push(value)
+      else data[key] = [data[key], value]
+    } else {
+      data[key] = value
+    }
   }
+  data.form_type = formType
 
-  const data = new FormData(formElement)
-  data.append('access_key', ACCESS_KEY)
-  data.append('subject', `New ${formType} — FlyUp Line website`)
-  data.append('from_name', 'FlyUp Line Website')
-
-  const res = await fetch(ENDPOINT, {
+  const res = await fetch('/api/quote', {
     method: 'POST',
-    headers: { Accept: 'application/json' },
-    body: data,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(data),
   })
 
   const json = await res.json().catch(() => ({}))
-  if (!res.ok || !json.success) {
-    throw new Error(json.message || `Request failed (${res.status})`)
+  if (!res.ok || !json.ok) {
+    throw new Error(json.error || `Request failed (${res.status})`)
   }
   return json
 }
