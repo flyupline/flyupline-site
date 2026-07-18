@@ -2008,3 +2008,206 @@ h6 {
     padding: 22px 18px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Premium quote form — route swap, trip grid, calendar
+   -------------------------------------------------------------------------- */
+
+/* From / To with a swap control on the divider */
+.route-fields {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.swap-btn {
+  position: absolute;
+  left: 50%;
+  top: 49px;
+  transform: translate(-50%, -50%);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--brand-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.8);
+  transition: transform var(--t-med), border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+}
+
+.swap-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.swap-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .route-fields {
+    grid-template-columns: 1fr;
+  }
+  .swap-btn {
+    left: auto;
+    right: 16px;
+    top: 50%;
+    transform: translate(0, -50%) rotate(90deg);
+  }
+  .swap-btn:hover {
+    transform: translate(0, -50%) rotate(270deg);
+  }
+}
+
+/* Trip detail controls flow: 1 → full width, 3 → three columns */
+.form-grid.trip-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+@media (max-width: 720px) {
+  .form-grid.trip-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Calendar popover */
+.popover-cal {
+  min-width: 300px;
+  width: min(322px, calc(100vw - 40px));
+  padding: 16px;
+}
+
+.cal {
+  user-select: none;
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cal-head span {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 0.96rem;
+}
+
+.cal-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+}
+
+.cal-nav:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand-2);
+  background: var(--brand-soft);
+}
+
+.cal-nav:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.cal-nav svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.cal-weekdays {
+  margin-bottom: 6px;
+}
+
+.cal-weekdays span {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-family: var(--font-head);
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.cal-cell {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.86rem;
+  font-family: var(--font-body);
+  color: var(--text);
+  border-radius: 9px;
+  transition: background-color var(--t-fast), color var(--t-fast);
+}
+
+.cal-cell.empty {
+  visibility: hidden;
+}
+
+.cal-cell:not(.disabled):not(.sel):hover {
+  background: var(--brand-soft);
+  color: var(--brand-2);
+}
+
+.cal-cell.disabled {
+  color: var(--text-3);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cal-cell.rng {
+  background: rgba(255, 97, 0, 0.15);
+  color: var(--brand-2);
+  border-radius: 0;
+}
+
+.cal-cell.sel {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.cal-cell.start {
+  border-radius: 9px 0 0 9px;
+}
+
+.cal-cell.end {
+  border-radius: 0 9px 9px 0;
+}
+
+.cal-cell.start.end,
+.cal-cell.sel:not(.start):not(.end) {
+  border-radius: 9px;
+}
+
+.cal-hint {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-3);
+  font-family: var(--font-head);
+}

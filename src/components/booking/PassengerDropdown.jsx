@@ -23,7 +23,8 @@ export default function PassengerDropdown() {
   const change = (key, delta, min) =>
     setCounts((c) => ({ ...c, [key]: Math.max(min, c[key] + delta) }))
 
-  const summary = `${counts.adult} Adult${counts.adult > 1 ? 's' : ''}, ${counts.child} Child, ${counts.infant} Infant`
+  const total = counts.adult + counts.child + counts.infant
+  const summary = `${total} traveler${total > 1 ? 's' : ''}`
 
   return (
     <div className="field field-icon" ref={wrapRef}>
@@ -36,7 +37,7 @@ export default function PassengerDropdown() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: 'pointer', paddingRight: 38, textOverflow: 'ellipsis' }}
       />
       <IconChevronDown
         style={{ position: 'absolute', right: 14, bottom: 17, width: 15, height: 15, left: 'auto' }}

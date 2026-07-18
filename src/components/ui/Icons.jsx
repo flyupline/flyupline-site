@@ -178,3 +178,20 @@ export const IconCard = (p) => (
     <line x1="2" x2="22" y1="10" y2="10" />
   </svg>
 )
+
+export const IconSwap = (p) => (
+  <svg {...base} {...p}>
+    <path d="m17 3 4 4-4 4" />
+    <path d="M21 7H3" />
+    <path d="m7 21-4-4 4-4" />
+    <path d="M3 17h18" />
+  </svg>
+)
+
+export const IconSeat = (p) => (
+  <svg {...base} {...p}>
+    <path d="M5 4v10a2 2 0 0 0 2 2h6" />
+    <path d="M5 18h14" />
+    <path d="M13 16a4 4 0 0 0 4-4V6a2 2 0 0 0-4 0v4a2 2 0 0 1-2 2H9" />
+  </svg>
+)

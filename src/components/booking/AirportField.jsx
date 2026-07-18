@@ -21,8 +21,8 @@ function loadAirports() {
   return airportsPromise
 }
 
-export default function AirportField({ label, name, placeholder, required = true }) {
-  const [value, setValue] = useState('')
+// Controlled field: parent owns `value` and gets updates via `onChange(next)`.
+export default function AirportField({ label, name, placeholder, required = true, value = '', onChange }) {
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
@@ -41,7 +41,7 @@ export default function AirportField({ label, name, placeholder, required = true
 
   const onInput = async (e) => {
     const next = e.target.value
-    setValue(next)
+    onChange?.(next)
     const query = next.toLowerCase().trim()
     if (!query) {
       setResults([])
@@ -73,6 +73,7 @@ export default function AirportField({ label, name, placeholder, required = true
         required={required}
         value={value}
         onChange={onInput}
+        onFocus={() => results.length && setOpen(true)}
       />
       {open && (
         <div className="suggest" role="listbox">
@@ -83,7 +84,7 @@ export default function AirportField({ label, name, placeholder, required = true
               aria-selected="false"
               key={`${a.iata}-${a.name}`}
               onClick={() => {
-                setValue(`${a.city} (${a.iata})`)
+                onChange?.(`${a.city} (${a.iata})`)
                 setOpen(false)
               }}
             >

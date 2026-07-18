@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconCalendar } from '../ui/Icons.jsx'
+import Calendar from './Calendar.jsx'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -9,14 +10,12 @@ function toISO(date) {
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
-
-function fmtShort(iso) {
-  const [, m, d] = iso.split('-')
+const fmtShort = (isoStr) => {
+  const [, m, d] = isoStr.split('-')
   return `${Number(d)} ${MONTHS[Number(m) - 1]}`
 }
-
-function fmtLong(iso) {
-  const [y, m, d] = iso.split('-')
+const fmtLong = (isoStr) => {
+  const [y, m, d] = isoStr.split('-')
   return `${MONTHS[Number(m) - 1]} ${Number(d)}, ${y}`
 }
 
@@ -62,15 +61,18 @@ export function DateRangeField({ name, label = 'Dates', placeholder = 'Select da
         style={{ cursor: 'pointer' }}
       />
       {open && (
-        <div className="popover">
-          <div className="popover-row">
-            <span>Depart</span>
-            <input type="date" value={start} max={end || undefined} onChange={(e) => setStart(e.target.value)} />
-          </div>
-          <div className="popover-row">
-            <span>Return</span>
-            <input type="date" value={end} min={start || undefined} onChange={(e) => setEnd(e.target.value)} />
-          </div>
+        <div className="popover popover-cal">
+          <Calendar
+            mode="range"
+            start={start}
+            end={end}
+            onSelect={({ start: s, end: e }) => {
+              setStart(s)
+              setEnd(e)
+              if (e) setOpen(false)
+            }}
+          />
+          <div className="cal-hint">{start && !end ? 'Now pick your return date' : 'Select your travel dates'}</div>
         </div>
       )}
     </div>
@@ -98,18 +100,15 @@ export function SingleDateField({ name, label = 'Date', placeholder = 'Select da
         style={{ cursor: 'pointer' }}
       />
       {open && (
-        <div className="popover">
-          <div className="popover-row">
-            <span>Date</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value)
-                setOpen(false)
-              }}
-            />
-          </div>
+        <div className="popover popover-cal">
+          <Calendar
+            mode="single"
+            start={date}
+            onSelect={({ start: s }) => {
+              setDate(s)
+              setOpen(false)
+            }}
+          />
         </div>
       )}
     </div>

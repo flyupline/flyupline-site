@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import PageHero from '../components/PageHero.jsx'
-import AirportField from '../components/booking/AirportField.jsx'
+import RouteFields from '../components/booking/RouteFields.jsx'
 import PassengerDropdown from '../components/booking/PassengerDropdown.jsx'
 import { DateRangeField, SingleDateField } from '../components/booking/DateField.jsx'
 import { SuccessPanel, ErrorNotice } from '../components/booking/FormFeedback.jsx'
@@ -114,9 +114,8 @@ function RoundtripForm() {
   return (
     <form onSubmit={onSubmit}>
       {status === 'error' && <ErrorNotice />}
-      <div className="form-grid">
-        <AirportField label="From" name="from[]" placeholder="City or airport" />
-        <AirportField label="To" name="to[]" placeholder="City or airport" />
+      <RouteFields />
+      <div className="form-grid trip-grid">
         <DateRangeField name="multiCityDate4" label="Travel dates" />
         <CabinClassField />
         <PassengerDropdown />
@@ -134,9 +133,8 @@ function OnewayForm() {
   return (
     <form onSubmit={onSubmit}>
       {status === 'error' && <ErrorNotice />}
-      <div className="form-grid">
-        <AirportField label="From" name="from[]" placeholder="City or airport" />
-        <AirportField label="To" name="to[]" placeholder="City or airport" />
+      <RouteFields />
+      <div className="form-grid trip-grid">
         <SingleDateField name="onewaydate" label="Departure date" />
         <CabinClassField />
         <PassengerDropdown />
@@ -158,18 +156,16 @@ function MulticityForm() {
 
       <div className="trip-row">
         <span className="tag">Trip 1</span>
-        <div className="form-grid">
-          <AirportField label="From" name="from[]" placeholder="City or airport" />
-          <AirportField label="To" name="to[]" placeholder="City or airport" />
+        <RouteFields />
+        <div className="form-grid trip-grid">
           <DateRangeField name="multiCityDate1" label="Dates" />
         </div>
       </div>
 
       <div className="trip-row">
         <span className="tag">Trip 2</span>
-        <div className="form-grid">
-          <AirportField label="From" name="from[]" placeholder="City or airport" />
-          <AirportField label="To" name="to[]" placeholder="City or airport" />
+        <RouteFields />
+        <div className="form-grid trip-grid">
           <DateRangeField name="multiCityDate2" label="Dates" />
         </div>
       </div>
@@ -177,9 +173,8 @@ function MulticityForm() {
       {extraTrip && (
         <div className="trip-row">
           <span className="tag">Trip 3</span>
-          <div className="form-grid">
-            <AirportField label="From" name="from[]" placeholder="City or airport" required={extraTrip} />
-            <AirportField label="To" name="to[]" placeholder="City or airport" required={extraTrip} />
+          <RouteFields required={extraTrip} />
+          <div className="form-grid trip-grid">
             <DateRangeField name="multiCityDate3" label="Dates" required={extraTrip} defaultToWeek={false} />
           </div>
         </div>
@@ -189,7 +184,7 @@ function MulticityForm() {
         {extraTrip ? <><IconX style={{ width: 16, height: 16 }} /> Remove trip 3</> : <><IconPlus style={{ width: 16, height: 16 }} /> Add another trip</>}
       </button>
 
-      <div className="form-grid">
+      <div className="form-grid trip-grid">
         <CabinClassField />
         <PassengerDropdown />
       </div>
