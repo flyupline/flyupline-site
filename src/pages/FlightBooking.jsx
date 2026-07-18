@@ -6,6 +6,7 @@ import { DateRangeField, SingleDateField } from '../components/booking/DateField
 import { SuccessPanel, ErrorNotice } from '../components/booking/FormFeedback.jsx'
 import Reveal from '../components/ui/Reveal.jsx'
 import { submitRequest } from '../lib/submitRequest.js'
+import { EMAIL_PATTERN, PHONE_PATTERN } from '../lib/validation.js'
 import usePageMeta from '../lib/usePageMeta.js'
 import { IconShield, IconClock, IconTag, IconHeadset, IconPhone, IconMail, IconCheck, IconPlus, IconX } from '../components/ui/Icons.jsx'
 
@@ -29,15 +30,38 @@ function PersonalFields() {
       <div className="form-grid">
         <div className="field full">
           <label>Full name*</label>
-          <input name="fullname" type="text" placeholder="Full name" required autoComplete="name" />
-        </div>
-        <div className="field">
-          <label>Phone*</label>
-          <input name="phone" type="tel" placeholder="e.g. +20 120 529 5295" required autoComplete="tel" />
+          <input
+            name="fullname"
+            type="text"
+            placeholder="Full name"
+            required
+            minLength={2}
+            autoComplete="name"
+            title="Please enter your full name."
+          />
         </div>
         <div className="field">
           <label>Email*</label>
-          <input name="email" type="email" placeholder="you@email.com" required autoComplete="email" />
+          <input
+            name="email"
+            type="email"
+            placeholder="you@email.com"
+            required
+            pattern={EMAIL_PATTERN}
+            autoComplete="email"
+            title="Enter a valid email address, e.g. you@email.com — this is where we'll send your options."
+          />
+        </div>
+        <div className="field">
+          <label>Phone (optional)</label>
+          <input
+            name="phone"
+            type="tel"
+            placeholder="e.g. +20 120 529 5295"
+            pattern={PHONE_PATTERN}
+            autoComplete="tel"
+            title="Enter a valid phone number (7–20 digits), or leave blank."
+          />
         </div>
         <div className="field full">
           <label>Notes (optional)</label>

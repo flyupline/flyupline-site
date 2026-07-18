@@ -24,6 +24,7 @@ const RATE_MAX = 5 // submissions per IP per window
 const RATE_SALT = SUPABASE_SERVICE_ROLE_KEY || 'flyupline-fallback-salt'
 const CAP = { name: 100, email: 160, phone: 40, message: 2000, field: 120, date: 60, cabin: 40, type: 60, legs: 6 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[+]?[\d\s()\-]{7,20}$/
 const ALLOWED_HOSTS = ['flyupline.com', 'www.flyupline.com', 'flyupline.vercel.app']
 
 const esc = (s) =>
@@ -186,9 +187,17 @@ export default async function handler(req, res) {
 
   const d = normalize(body)
 
-  // Validation
+  // Validation — name, email, and (for quotes) flight info are required;
+  // phone is optional but must be valid when provided.
+  const isQuote = /quote/i.test(d.form_type)
   if (!d.name || d.name.length < 2) return res.status(400).json({ error: 'Please provide your name.' })
   if (!EMAIL_RE.test(d.email)) return res.status(400).json({ error: 'Please provide a valid email address.' })
+  if (d.phone && !PHONE_RE.test(d.phone)) {
+    return res.status(400).json({ error: 'Please enter a valid phone number, or leave it blank.' })
+  }
+  if (isQuote && d.legs.length === 0) {
+    return res.status(400).json({ error: 'Please provide your flight details (from, to, and dates).' })
+  }
 
   // Rate limiting (per IP over a rolling window)
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown'

@@ -3,6 +3,7 @@ import PageHero from '../components/PageHero.jsx'
 import Reveal from '../components/ui/Reveal.jsx'
 import { SuccessPanel, ErrorNotice } from '../components/booking/FormFeedback.jsx'
 import { submitRequest } from '../lib/submitRequest.js'
+import { EMAIL_PATTERN, PHONE_PATTERN } from '../lib/validation.js'
 import usePageMeta from '../lib/usePageMeta.js'
 import { IconPhone, IconMail, IconClock } from '../components/ui/Icons.jsx'
 
@@ -69,19 +70,19 @@ export default function Contact() {
                   <div className="form-grid">
                     <div className="field full">
                       <label>Full name*</label>
-                      <input name="name" type="text" placeholder="Full name" required autoComplete="name" />
-                    </div>
-                    <div className="field">
-                      <label>Phone*</label>
-                      <input name="phone" type="tel" placeholder="e.g. +20 120 529 5295" required autoComplete="tel" />
+                      <input name="name" type="text" placeholder="Full name" required minLength={2} autoComplete="name" title="Please enter your full name." />
                     </div>
                     <div className="field">
                       <label>Email*</label>
-                      <input name="email" type="email" placeholder="you@email.com" required autoComplete="email" />
+                      <input name="email" type="email" placeholder="you@email.com" required pattern={EMAIL_PATTERN} autoComplete="email" title="Enter a valid email address, e.g. you@email.com." />
+                    </div>
+                    <div className="field">
+                      <label>Phone (optional)</label>
+                      <input name="phone" type="tel" placeholder="e.g. +20 120 529 5295" pattern={PHONE_PATTERN} autoComplete="tel" title="Enter a valid phone number (7–20 digits), or leave blank." />
                     </div>
                     <div className="field full">
                       <label>Your message*</label>
-                      <textarea name="message" placeholder="How can we help with your trip?" required></textarea>
+                      <textarea name="message" placeholder="How can we help with your trip?" required minLength={5}></textarea>
                     </div>
                   </div>
                   <div className="form-foot" style={{ alignItems: 'flex-start' }}>
