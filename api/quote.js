@@ -1,6 +1,11 @@
 // Vercel serverless function — receives a form submission, stores it in
 // Supabase, emails the team a branded alert, and sends the customer a branded
-// confirmation. Uses only native fetch (no dependencies).
+// confirmation. Native fetch only (no dependencies).
+//
+// Hardening: input validation + length caps, per-IP rate limiting (via
+// Supabase), sanitized/bounded storage, honeypot, and a soft origin check.
+
+import crypto from 'node:crypto'
 
 const {
   RESEND_API_KEY,
@@ -13,26 +18,55 @@ const {
 const LOGO = 'https://flyupline.vercel.app/assets/img/logo2.png'
 const BRAND = '#FF6100'
 
+// Abuse controls
+const RATE_WINDOW_MIN = 10
+const RATE_MAX = 5 // submissions per IP per window
+const RATE_SALT = SUPABASE_SERVICE_ROLE_KEY || 'flyupline-fallback-salt'
+const CAP = { name: 100, email: 160, phone: 40, message: 2000, field: 120, date: 60, cabin: 40, type: 60, legs: 6 }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const ALLOWED_HOSTS = ['flyupline.com', 'www.flyupline.com', 'flyupline.vercel.app']
+
 const esc = (s) =>
   String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-
+const clean = (v, max) => (v == null ? '' : String(v).replace(/\s+/g, ' ').trim().slice(0, max))
 const asArray = (v) => (Array.isArray(v) ? v : v == null || v === '' ? [] : [v])
+const intIn = (v, lo, hi) => {
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo
+}
+const hashIp = (ip) => crypto.createHash('sha256').update(ip + RATE_SALT).digest('hex')
 
-function summarize(body) {
-  const froms = asArray(body['from[]'])
-  const tos = asArray(body['to[]'])
+// Normalize + bound the raw submission into a safe, known shape.
+function normalize(body) {
   const legs = []
+  const froms = asArray(body['from[]']).slice(0, CAP.legs)
+  const tos = asArray(body['to[]']).slice(0, CAP.legs)
   for (let i = 0; i < Math.max(froms.length, tos.length); i++) {
-    if (froms[i] || tos[i]) legs.push(`${froms[i] || '?'} → ${tos[i] || '?'}`)
+    const f = clean(froms[i], CAP.field)
+    const t = clean(tos[i], CAP.field)
+    if (f || t) legs.push(`${f || '?'} → ${t || '?'}`)
   }
   const dates = ['multiCityDate1', 'multiCityDate2', 'multiCityDate3', 'multiCityDate4', 'onewaydate']
-    .map((k) => body[k])
+    .map((k) => clean(body[k], CAP.date))
     .filter(Boolean)
+  const adults = intIn(body.adult_quantity, 0, 30)
+  const children = intIn(body.child_quantity, 0, 30)
+  const infants = intIn(body.infant_quantity, 0, 30)
   const travelers = []
-  if (body.adult_quantity) travelers.push(`${body.adult_quantity} adult(s)`)
-  if (body.child_quantity && body.child_quantity !== '0') travelers.push(`${body.child_quantity} child(ren)`)
-  if (body.infant_quantity && body.infant_quantity !== '0') travelers.push(`${body.infant_quantity} infant(s)`)
-  return { legs, dates, travelers, cabin: body.cabin_class }
+  if (adults) travelers.push(`${adults} adult(s)`)
+  if (children) travelers.push(`${children} child(ren)`)
+  if (infants) travelers.push(`${infants} infant(s)`)
+  return {
+    form_type: clean(body.form_type, CAP.type) || 'quote',
+    name: clean(body.fullname || body.name, CAP.name),
+    email: clean(body.email, CAP.email),
+    phone: clean(body.phone, CAP.phone),
+    notes: clean(body.message, CAP.message),
+    cabin: clean(body.cabin_class, CAP.cabin),
+    legs,
+    dates,
+    travelers,
+  }
 }
 
 const rows = (pairs) =>
@@ -55,15 +89,15 @@ const shell = (inner) => `<!doctype html><html><body style="margin:0;background:
   <tr><td style="background:#0d0d0f;padding:22px 32px;text-align:center"><p style="margin:0;color:#9a9a9a;font:12px/1.6 Arial,sans-serif">FlyUp Line · Fast booking, low prices, happy journeys<br>+20 120 529 5295 · flyupline.booking@gmail.com</p></td></tr>
 </table></td></tr></table></body></html>`
 
-function customerHtml(name, s) {
+function customerHtml(d) {
   const summary = rows([
-    ['Route', s.legs.join('  •  ')],
-    ['Dates', s.dates.join('  •  ')],
-    ['Travelers', s.travelers.join(', ')],
-    ['Cabin', s.cabin],
+    ['Route', d.legs.join('  •  ')],
+    ['Dates', d.dates.join('  •  ')],
+    ['Travelers', d.travelers.join(', ')],
+    ['Cabin', d.cabin],
   ])
   return shell(`
-    <h1 style="margin:0 0 14px;color:#111;font:700 24px Arial,sans-serif">Thank you${name ? ', ' + esc(name) : ''}!</h1>
+    <h1 style="margin:0 0 14px;color:#111;font:700 24px Arial,sans-serif">Thank you${d.name ? ', ' + esc(d.name) : ''}!</h1>
     <p style="margin:0 0 16px;color:#444;font:16px/1.65 Arial,sans-serif">We've received your request and our travel experts are already searching for the best available flights for your trip. You'll receive personalized options and prices by email <strong>within 24 hours</strong>.</p>
     ${summary ? `<table role="presentation" width="100%" style="margin:6px 0 20px;border-top:1px solid #eee;border-bottom:1px solid #eee">${summary}</table>` : ''}
     <p style="margin:0;color:#444;font:16px/1.65 Arial,sans-serif">Need to add anything? Just reply to this email or call <a href="tel:+201205295295" style="color:${BRAND};text-decoration:none">+20 120 529 5295</a>.</p>
@@ -71,21 +105,20 @@ function customerHtml(name, s) {
   `)
 }
 
-function teamHtml(body, s) {
-  const name = body.fullname || body.name || ''
+function teamHtml(d) {
   const detail = rows([
-    ['Type', body.form_type],
-    ['Name', name],
-    ['Email', body.email],
-    ['Phone', body.phone],
-    ['Route', s.legs.join('  •  ')],
-    ['Dates', s.dates.join('  •  ')],
-    ['Travelers', s.travelers.join(', ')],
-    ['Cabin', s.cabin],
-    ['Notes', body.message],
+    ['Type', d.form_type],
+    ['Name', d.name],
+    ['Email', d.email],
+    ['Phone', d.phone],
+    ['Route', d.legs.join('  •  ')],
+    ['Dates', d.dates.join('  •  ')],
+    ['Travelers', d.travelers.join(', ')],
+    ['Cabin', d.cabin],
+    ['Notes', d.notes],
   ])
   return shell(`
-    <h1 style="margin:0 0 16px;color:#111;font:700 22px Arial,sans-serif">New ${esc(body.form_type || 'request')}</h1>
+    <h1 style="margin:0 0 16px;color:#111;font:700 22px Arial,sans-serif">New ${esc(d.form_type)}</h1>
     <table role="presentation" width="100%">${detail}</table>
   `)
 }
@@ -103,38 +136,87 @@ async function resendSend(payload) {
   }
 }
 
+const sbHeaders = {
+  apikey: SUPABASE_SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  'Content-Type': 'application/json',
+}
+
+async function overRateLimit(ipHash) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false
+  try {
+    const since = new Date(Date.now() - RATE_WINDOW_MIN * 60000).toISOString()
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/quote_requests?ip_hash=eq.${ipHash}&created_at=gt.${encodeURIComponent(since)}&select=id`,
+      { headers: { ...sbHeaders, Prefer: 'count=exact', Range: '0-0' } }
+    )
+    const total = Number((r.headers.get('content-range') || '*/0').split('/')[1]) || 0
+    return total >= RATE_MAX
+  } catch {
+    return false // fail open on counting errors; other controls still apply
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
+  // Soft origin check: reject browser requests from foreign sites.
+  const origin = req.headers.origin
+  if (origin) {
+    let host = ''
+    try {
+      host = new URL(origin).hostname
+    } catch {
+      host = ''
+    }
+    const ok = ALLOWED_HOSTS.includes(host) || host.endsWith('.vercel.app') || host === 'localhost'
+    if (!ok) return res.status(403).json({ error: 'Forbidden origin' })
+  }
 
-  // Honeypot: silently accept and drop bot submissions.
+  let body
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
+  } catch {
+    return res.status(400).json({ error: 'Invalid request body' })
+  }
+  if (typeof body !== 'object' || Array.isArray(body)) return res.status(400).json({ error: 'Invalid request body' })
+
+  // Honeypot — silently accept and drop bots.
   if (body.botcheck) return res.status(200).json({ ok: true })
 
-  const name = body.fullname || body.name || ''
-  if (!body.email || !name) return res.status(400).json({ error: 'Please provide your name and email.' })
+  const d = normalize(body)
 
-  const s = summarize(body)
+  // Validation
+  if (!d.name || d.name.length < 2) return res.status(400).json({ error: 'Please provide your name.' })
+  if (!EMAIL_RE.test(d.email)) return res.status(400).json({ error: 'Please provide a valid email address.' })
 
-  // 1) Store the request in Supabase.
+  // Rate limiting (per IP over a rolling window)
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown'
+  const ipHash = hashIp(ip)
+  if (await overRateLimit(ipHash)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again in a few minutes or contact us directly.' })
+  }
+
+  // 1) Store the request (sanitized payload only — never the raw body).
   let storeOk = false
   try {
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/quote_requests`, {
         method: 'POST',
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=minimal',
-        },
+        headers: { ...sbHeaders, Prefer: 'return=minimal' },
         body: JSON.stringify({
-          form_type: body.form_type || 'quote',
-          full_name: name,
-          email: body.email,
-          phone: body.phone || null,
-          notes: body.message || null,
-          payload: body,
+          form_type: d.form_type,
+          full_name: d.name,
+          email: d.email,
+          phone: d.phone || null,
+          notes: d.notes || null,
+          ip_hash: ipHash,
+          payload: {
+            route: d.legs,
+            dates: d.dates,
+            travelers: d.travelers,
+            cabin: d.cabin,
+          },
         }),
       })
       storeOk = r.ok
@@ -143,24 +225,23 @@ export default async function handler(req, res) {
     storeOk = false
   }
 
-  // 2) Notify the team (reaches the account inbox today).
+  // 2) Notify the team.
   const teamOk = await resendSend({
     from: FROM_EMAIL,
     to: [TEAM_EMAIL],
-    reply_to: body.email,
-    subject: `New ${body.form_type || 'request'} — ${name}`,
-    html: teamHtml(body, s),
+    reply_to: d.email,
+    subject: `New ${d.form_type} — ${d.name}`,
+    html: teamHtml(d),
   })
 
-  // 3) Send the customer a branded confirmation (activates once a domain is verified in Resend).
+  // 3) Branded customer confirmation (delivers to any address once a domain is verified in Resend).
   await resendSend({
     from: FROM_EMAIL,
-    to: [body.email],
+    to: [d.email],
     subject: "We've received your request — FlyUp Line",
-    html: customerHtml(name, s),
+    html: customerHtml(d),
   })
 
-  // As long as we captured the request (stored or notified), report success.
   if (storeOk || teamOk) return res.status(200).json({ ok: true })
   return res.status(502).json({ error: 'Could not process the request. Please contact us directly.' })
 }
