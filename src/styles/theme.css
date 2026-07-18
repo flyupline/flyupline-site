@@ -1953,3 +1953,58 @@ h6 {
     transform: none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Responsive hardening (narrow phones)
+   -------------------------------------------------------------------------- */
+
+/* Let grid/flex children shrink below their content width instead of
+   forcing horizontal overflow. */
+.quote-layout > *,
+.contact-layout > *,
+.info-card > *,
+.service-card > *,
+.stat > *,
+.step-card,
+.aside-list li,
+.footer-contact li {
+  min-width: 0;
+}
+
+/* Long emails / values wrap instead of pushing the layout wider. */
+.info-card a,
+.aside-contact a,
+.footer-contact a,
+.cta-contacts a,
+.suggest-item .city,
+.suggest-item .code {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Trip-type tabs: fill the width and fit any phone. */
+@media (max-width: 520px) {
+  .segmented {
+    display: flex;
+    width: 100%;
+  }
+  .segmented button {
+    flex: 1;
+    padding: 10px 4px;
+    font-size: 0.82rem;
+    text-align: center;
+  }
+}
+
+/* Comfortable edge spacing on small screens. */
+@media (max-width: 420px) {
+  :root {
+    --container: 1180px;
+  }
+  .container {
+    width: min(var(--container), 100% - 32px);
+  }
+  .panel {
+    padding: 22px 18px;
+  }
+}
