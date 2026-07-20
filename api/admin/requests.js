@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   try {
     const { db } = await requireAdmin(req)
     // Lazy expiry sweep before listing.
-    await db.rpc('mark_expired_quotes').catch(() => {})
+    await db.rpc('mark_expired_quotes')
 
     const q = req.query || {}
     const archived = q.archived === 'true'

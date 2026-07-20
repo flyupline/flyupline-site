@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     if (!token || token.length < 20) return res.status(400).json({ error: 'Invalid quote link' })
 
     const db = adminDb()
-    await db.rpc('mark_expired_quotes').catch(() => {})
+    await db.rpc('mark_expired_quotes')
 
     const { data: version } = await db.from('quote_versions').select('*').eq('token', token).maybeSingle()
     if (!version) return res.status(404).json({ error: 'This quote link is invalid or has been removed.' })

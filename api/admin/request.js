@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const id = (req.query || {}).id
     if (!id) return res.status(400).json({ error: 'Missing id' })
 
-    await db.rpc('mark_expired_quotes').catch(() => {})
+    await db.rpc('mark_expired_quotes')
 
     const { data: request, error } = await db.from('quote_requests').select('*').eq('id', id).maybeSingle()
     if (error) throw error
