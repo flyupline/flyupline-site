@@ -208,17 +208,20 @@ export default async function handler(req, res) {
 
   // 1) Store the request (sanitized payload only — never the raw body).
   let storeOk = false
+  const reference = 'FUL-' + crypto.randomBytes(3).toString('hex').toUpperCase()
   try {
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/quote_requests`, {
         method: 'POST',
-        headers: { ...sbHeaders, Prefer: 'return=minimal' },
+        headers: { ...sbHeaders, Prefer: 'return=representation' },
         body: JSON.stringify({
           form_type: d.form_type,
           full_name: d.name,
           email: d.email,
           phone: d.phone || null,
           notes: d.notes || null,
+          reference,
+          status: 'new',
           ip_hash: ipHash,
           payload: {
             route: d.legs,
@@ -229,6 +232,23 @@ export default async function handler(req, res) {
         }),
       })
       storeOk = r.ok
+      // Seed the activity log + admin notification for the new request.
+      if (r.ok) {
+        const rows = await r.json().catch(() => [])
+        const id = rows?.[0]?.id
+        if (id) {
+          await fetch(`${SUPABASE_URL}/rest/v1/activity_log`, {
+            method: 'POST',
+            headers: { ...sbHeaders, Prefer: 'return=minimal' },
+            body: JSON.stringify({ request_id: id, action: 'request_submitted', actor: 'customer', actor_name: d.name, detail: `${d.form_type}${d.legs?.[0] ? ' · ' + d.legs[0] : ''}` }),
+          }).catch(() => {})
+          await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+            method: 'POST',
+            headers: { ...sbHeaders, Prefer: 'return=minimal' },
+            body: JSON.stringify({ request_id: id, type: 'new_request', title: `New quote request — ${d.name}`, body: `${reference} · ${d.legs?.[0] || d.form_type}` }),
+          }).catch(() => {})
+        }
+      }
     }
   } catch {
     storeOk = false
