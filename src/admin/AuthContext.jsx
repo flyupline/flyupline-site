@@ -44,9 +44,12 @@ export function AuthProvider({ children }) {
 
   const login = (email, password) => supabase.auth.signInWithPassword({ email, password })
   const logout = () => supabase.auth.signOut()
+  const resetPassword = (email) =>
+    supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/admin/reset` })
+  const updatePassword = (password) => supabase.auth.updateUser({ password })
 
   return (
-    <AuthCtx.Provider value={{ session, user: session?.user, isAdmin, loading, login, logout }}>
+    <AuthCtx.Provider value={{ session, user: session?.user, isAdmin, loading, login, logout, resetPassword, updatePassword }}>
       {children}
     </AuthCtx.Provider>
   )

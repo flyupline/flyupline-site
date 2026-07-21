@@ -3,6 +3,7 @@ import { AuthProvider } from './AuthContext.jsx'
 import AdminRoute from './AdminRoute.jsx'
 import AdminLayout from './AdminLayout.jsx'
 import AdminLogin from '../pages/admin/Login.jsx'
+import ResetPassword from '../pages/admin/ResetPassword.jsx'
 import Dashboard from '../pages/admin/Dashboard.jsx'
 import RequestDetail from '../pages/admin/RequestDetail.jsx'
 
@@ -11,6 +12,7 @@ export default function AdminApp() {
     <AuthProvider>
       <Routes>
         <Route path="login" element={<AdminLogin />} />
+        <Route path="reset" element={<ResetPassword />} />
         <Route
           element={
             <AdminRoute>
