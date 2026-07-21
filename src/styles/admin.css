@@ -352,8 +352,8 @@
 .save-pill.error { color: #ef4444; }
 
 .qb-general { border-bottom: 1px solid var(--line); padding-bottom: 14px; }
-.qb-optional-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.qb-optional-btns .qb-field { flex: 1; min-width: 240px; }
+.qb-optional-btns { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 12px; }
+.qb-optional-btns .qb-field { width: 100%; }
 
 /* collapsible section */
 .qb-sec { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
@@ -449,8 +449,11 @@
 @media (max-width: 560px) { .qb-actionbar-btns { flex: 1; } .qb-actionbar-btns .btn { flex: 1; padding: 12px; } .qb-actionbar .save-pill { display: none; } }
 
 /* segment drawer */
-.seg-drawer { width: min(620px, 100%); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); overflow: hidden; margin: auto; max-height: 92vh; display: flex; flex-direction: column; }
-.seg-body { padding: 20px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+/* Drawer must NOT clip its autocomplete dropdowns: no inner scroll / overflow;
+   the fixed .preview-overlay (screen height) scrolls a tall drawer instead. */
+.seg-drawer { width: min(620px, 100%); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); margin: auto; display: flex; flex-direction: column; }
+.seg-drawer .preview-bar { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.seg-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; }
 .seg-h { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-2); margin-top: 8px; }
 .seg-dur { color: var(--text-2); font-size: 0.86rem; }
 .seg-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; color: var(--text-2); }
