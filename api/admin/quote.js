@@ -75,7 +75,10 @@ export default async function handler(req, res) {
       if (['new', 'reviewing', 'waiting_info'].includes(request.status)) {
         await db.from('quote_requests').update({ status: 'draft_quote' }).eq('id', requestId)
       }
-      await logActivity(db, requestId, { action: 'quote_draft_saved', actor: 'admin', actorName: adminName, detail: `${options.length} option(s)` })
+      // Autosave passes silent:true so it doesn't spam the activity log.
+      if (!body.silent) {
+        await logActivity(db, requestId, { action: 'quote_draft_saved', actor: 'admin', actorName: adminName, detail: `${options.length} option(s)` })
+      }
       return res.status(200).json({ ok: true, versionId })
     }
 

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/adminApi.js'
 import { supabase } from '../../lib/supabase.js'
 import { StatusBadge, ALL_STATUSES, STATUS_META, money, fmtDate, fmtDateTime, fromNow } from '../../admin/ui.jsx'
-import QuoteBuilder from '../../admin/QuoteBuilder.jsx'
+import FlightQuoteBuilder from '../../admin/FlightQuoteBuilder.jsx'
 import QuoteDisplay from '../../components/quote/QuoteDisplay.jsx'
 import { SITE } from '../../lib/site.js'
 
@@ -16,6 +16,7 @@ export default function RequestDetail() {
   const [note, setNote] = useState('')
   const [reply, setReply] = useState('')
   const [busy, setBusy] = useState('')
+  const [builderKey, setBuilderKey] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -80,10 +81,18 @@ export default function RequestDetail() {
         </div>
       </div>
 
+      <FlightQuoteBuilder
+        key={builderKey}
+        request={r}
+        versions={d.versions}
+        options={d.options}
+        onRefresh={load}
+        onReloadHard={() => { setBuilderKey((k) => k + 1); load() }}
+        onPreview={setPreview}
+      />
+
       <div className="detail-grid">
         <div className="detail-main">
-          <QuoteBuilder key={(d.versions.find((v) => v.status === 'draft')?.id) || 'new'} request={r} versions={d.versions} options={d.options} onReload={load} onPreview={setPreview} />
-
           <section className="panel-card">
             <h3>Quote versions</h3>
             {d.versions.length === 0 ? <p className="muted">No quotes created yet.</p> : (
