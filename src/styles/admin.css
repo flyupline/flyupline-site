@@ -641,3 +641,21 @@
 .sys-bd-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .sys-bd-label { color: var(--text-2); }
 .sys-bd-val { margin-left: auto; font-family: var(--font-head); font-weight: 600; }
+
+/* Topbar: prevent the logo label, nav and account controls from colliding
+   on narrow screens (flex children must be allowed to shrink). */
+.admin-topbar > * { min-width: 0; }
+.admin-logo { flex-shrink: 0; }
+.admin-logout { white-space: nowrap; }
+.admin-nav { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.admin-nav::-webkit-scrollbar { display: none; }
+.admin-nav a { white-space: nowrap; }
+@media (max-width: 720px) {
+  .admin-logo span { display: none; }          /* drop the "Admin" label */
+  .admin-topbar { gap: 10px; padding-inline: 14px; }
+  .admin-nav { margin-left: 6px; }
+}
+@media (max-width: 420px) {
+  .admin-logout { padding: 6px 10px; font-size: 0.8rem; }
+  .admin-nav a { padding: 6px 9px; }
+}
