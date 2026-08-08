@@ -263,12 +263,13 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
     draft
       ? { currency: draft.currency || 'USD', expires_at: isoToLocalInput(draft.expires_at), note: draft.customer_message || '', terms: draft.terms || '' }
       : (() => {
-          // New quote: pre-fill from the admin's saved defaults (Settings).
+          // New quote: pre-fill from the workspace defaults (Settings → Quote defaults).
           const dft = loadQuoteDefaults()
           const days = Number(dft.validityDays) || 3
+          const [hh, mm] = String(dft.expiryTime || '23:59').split(':')
           const exp = new Date()
           exp.setDate(exp.getDate() + days)
-          exp.setHours(23, 59, 0, 0)
+          exp.setHours(Number(hh) || 23, Number(mm) || 59, 0, 0)
           return { currency: dft.currency || 'USD', expires_at: isoToLocalInput(exp.toISOString()), note: '', terms: dft.terms || '' }
         })()
   const initOptions = () => {
