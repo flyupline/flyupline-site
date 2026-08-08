@@ -27,6 +27,31 @@ export function fmtDT(date, time) {
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+/* ---- datetime-local <-> stored ISO (timestamptz) helpers ----
+   The DB stores UTC. <input type="datetime-local"> works in the admin's local
+   time, so convert on the way in and out to keep the wall-clock time correct. */
+export function isoToLocalInput(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+export function localInputToIso(value) {
+  if (!value) return null
+  const d = new Date(value) // no offset => parsed as local time
+  return isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+// Friendly display for a stored timestamp, e.g. "1 Aug 2026, 14:30"
+export function fmtStamp(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 export function airportCode(a) {
   return a?.code || ''
 }

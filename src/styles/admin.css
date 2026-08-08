@@ -496,3 +496,54 @@
 /* password reset link */
 .admin-link { align-self: center; color: var(--text-2); font-size: 0.85rem; margin-top: 6px; }
 .admin-link:hover { color: var(--brand-2); }
+
+/* Standing ticketing / availability notice on every quote */
+.q-ticketing-notice { display: flex; gap: 14px; align-items: flex-start; background: rgba(255, 97, 0, 0.08); border: 1px solid rgba(255, 97, 0, 0.4); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px; }
+.q-notice-icon { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; font-family: var(--font-head); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.q-ticketing-notice p { margin: 0; color: var(--text-2); font-size: 0.92rem; line-height: 1.6; }
+@media print {
+  .q-ticketing-notice { background: #fff8f3 !important; border-color: #ffb98a !important; }
+  .q-ticketing-notice p { color: #333 !important; }
+}
+
+/* Conversation: follow-up tracking */
+.conv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.conv-head h3 { margin: 0; }
+.conv-counts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.conv-chip { font-size: 0.74rem; font-family: var(--font-head); padding: 3px 10px; border-radius: var(--radius-full); border: 1px solid var(--line); color: var(--text-2); }
+.conv-chip.sent { color: var(--brand-2); border-color: rgba(255,97,0,0.35); background: rgba(255,97,0,0.08); }
+.conv-chip.recv { color: #86efac; border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
+.conv-last { color: var(--text-3); font-size: 0.76rem; }
+.msg-tag { display: inline-block; font-size: 0.68rem; font-family: var(--font-head); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brand-2); background: rgba(255,97,0,0.12); border-radius: 4px; padding: 1px 6px; margin-right: 6px; }
+
+/* ---------- settings ---------- */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+.settings-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+.settings-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+.settings-card > .muted { font-size: 0.86rem; margin-bottom: 16px; display: block; }
+.settings-form { display: flex; flex-direction: column; gap: 12px; }
+.team-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.team-row { display: flex; align-items: center; gap: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
+.team-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-2); font-family: var(--font-head); font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.team-info { min-width: 0; flex: 1; }
+.team-email { font-size: 0.9rem; overflow-wrap: break-word; }
+.team-meta { color: var(--text-3); font-size: 0.76rem; margin-top: 2px; }
+.team-badge { font-size: 0.68rem; font-family: var(--font-head); text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid var(--line-strong); color: var(--text-2); }
+.team-badge.you { color: var(--brand-2); border-color: rgba(255,97,0,0.4); }
+.team-badge.pending { color: #eab308; border-color: rgba(234,179,8,0.4); }
+.team-remove { color: var(--text-3); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font-size: 0.78rem; }
+.team-remove:hover { border-color: #ef4444; color: #f87171; }
+
+/* admin top nav */
+.admin-nav { display: flex; gap: 6px; margin-right: auto; margin-left: 22px; }
+.admin-nav a { font-family: var(--font-head); font-size: 0.88rem; color: var(--text-2); padding: 8px 14px; border-radius: var(--radius-full); transition: color var(--t-fast), background-color var(--t-fast); }
+.admin-nav a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.admin-nav a.active { color: var(--brand-2); background: rgba(255,97,0,0.1); }
+@media (max-width: 560px) { .admin-nav { margin-left: 10px; } .admin-nav a { padding: 7px 10px; font-size: 0.82rem; } }
+
+/* login alternates */
+.login-divider { display: flex; align-items: center; gap: 12px; color: var(--text-3); font-size: 0.78rem; margin: 6px 0; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.login-alt { display: flex; flex-direction: column; gap: 8px; }
+.login-link { color: var(--brand-2); font-size: 0.85rem; align-self: center; }
+.login-link:hover { text-decoration: underline; }

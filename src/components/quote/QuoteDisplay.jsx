@@ -1,9 +1,13 @@
 // Presentational, branded flight-quote renderer. Shared by the customer quote
 // page and the admin preview so both always match. No actions here.
 import { formatMoney } from '../../lib/money.js'
-import { fmtDT, fmtDuration, durationMin, connectionInfo } from '../../admin/flightUtils.js'
+import { fmtDT, fmtDuration, durationMin, connectionInfo, fmtStamp } from '../../admin/flightUtils.js'
 
 const fmtD = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
+
+// Standing notice shown on every quote.
+export const TICKETING_NOTICE =
+  'Please note that the price of the tickets and the availability of seats are not guaranteed until ticketed. Please approve at the earliest to proceed.'
 
 const SERVICE_LABELS = {
   personal_item: 'Personal item', cabin_baggage: 'Cabin baggage', checked_baggage: 'Checked baggage',
@@ -58,10 +62,9 @@ export function OptionCard({ option, cur, selectable, onSelect, selected }) {
   const groups = ['outbound', 'return', 'onward'].filter((g) => segs.some((s) => (s.group || 'onward') === g))
 
   const priceRows = [
-    ['base_cents', 'Base fare'], ['taxes_cents', 'Taxes & fees'], ['service_fee_cents', 'Service fee'], ['additional_cents', 'Additional'],
+    ['base_cents', 'Base fare'], ['taxes_cents', 'Taxes & fees'], ['additional_cents', 'Additional'],
   ].filter(([k]) => pricing[k] != null)
   const discount = pricing.discount_cents || 0
-  const deposit = pricing.deposit_cents
   const total = pricing.total_cents != null ? pricing.total_cents : (option.total_price != null ? Math.round(option.total_price * 100) : null)
   const perTraveler = pricing.per_traveler_cents
 
@@ -111,8 +114,6 @@ export function OptionCard({ option, cur, selectable, onSelect, selected }) {
             {discount > 0 && <tr className="q-discount"><td>Discount</td><td>− {formatMoney(discount, cur)}</td></tr>}
             <tr className="q-total"><td>Total</td><td>{formatMoney(total, cur)}</td></tr>
             {perTraveler != null && <tr className="q-sub"><td>Per traveller</td><td>{formatMoney(perTraveler, cur)}</td></tr>}
-            {deposit != null && <tr className="q-sub"><td>Deposit to confirm</td><td>{formatMoney(deposit, cur)}</td></tr>}
-            {deposit != null && total != null && <tr className="q-sub"><td>Remaining balance</td><td>{formatMoney(total - deposit, cur)}</td></tr>}
           </tbody>
         </table>
         {pricing.payment_deadline && <p className="q-payterms"><strong>Payment deadline:</strong> {fmtD(pricing.payment_deadline)}</p>}
@@ -141,7 +142,7 @@ export default function QuoteDisplay({ data, selectable, onSelect, selectedId })
           <div><span>Route</span><strong>{data.route?.[0] || `${data.origin || '?'} → ${data.destination || '?'}`}</strong></div>
           <div><span>Dates</span><strong>{(data.dates || []).join(' · ') || '—'}</strong></div>
           <div><span>Travellers</span><strong>{(data.travelers || []).join(', ') || '—'}</strong></div>
-          {v.expires_at && <div><span>Valid until</span><strong>{fmtD(v.expires_at)}</strong></div>}
+          {v.expires_at && <div><span>Valid until</span><strong>{fmtStamp(v.expires_at)}</strong></div>}
         </div>
       </div>
 
@@ -153,10 +154,14 @@ export default function QuoteDisplay({ data, selectable, onSelect, selectedId })
         ))}
       </div>
 
-      {(v.terms || v.booking_deadline) && (
+      <div className="q-ticketing-notice">
+        <span className="q-notice-icon" aria-hidden="true">!</span>
+        <p>{TICKETING_NOTICE}</p>
+      </div>
+
+      {v.terms && (
         <div className="q-fineprint">
-          {v.booking_deadline && <section><h4>Booking deadline</h4><p>{fmtD(v.booking_deadline)}</p></section>}
-          {v.terms && <section><h4>Terms &amp; conditions</h4><p>{v.terms}</p></section>}
+          <section><h4>Terms &amp; conditions</h4><p>{v.terms}</p></section>
         </div>
       )}
     </div>

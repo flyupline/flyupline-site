@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
 import { apiGet, apiPost } from '../lib/adminApi.js'
@@ -66,6 +66,10 @@ export default function AdminLayout() {
           <img src="/assets/img/logo2.png" alt="FlyUp Line" />
           <span>Admin</span>
         </Link>
+        <nav className="admin-nav">
+          <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : undefined)}>Requests</NavLink>
+          <NavLink to="/admin/settings" className={({ isActive }) => (isActive ? 'active' : undefined)}>Settings</NavLink>
+        </nav>
         <div className="admin-topbar-right">
           <div className="notif" ref={bellRef}>
             <button className="notif-btn" onClick={() => setOpen((o) => !o)} aria-label="Notifications">

@@ -6,6 +6,10 @@ const SITE = process.env.PUBLIC_SITE_URL || 'https://flyupline.com'
 const LOGO = `${SITE}/assets/img/logo2.png`
 const BRAND = '#FF6100'
 
+// Standing notice included on every quote (mirrors the one on the quote page).
+export const TICKETING_NOTICE =
+  'Please note that the price of the tickets and the availability of seats are not guaranteed until ticketed. Please approve at the earliest to proceed.'
+
 export const esc = (s) =>
   String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
@@ -67,6 +71,9 @@ export function quoteEmailHtml({ firstName, reference, destination, dates, trave
     <table role="presentation" width="100%" style="margin:0 0 24px;border-top:1px solid #eee;border-bottom:1px solid #eee">${details}</table>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 22px"><tr><td style="border-radius:999px;background:${BRAND}">
       <a href="${quoteUrl}" style="display:inline-block;padding:15px 40px;color:#fff;font:700 16px Arial,sans-serif;text-decoration:none;border-radius:999px">View Your Quote &rarr;</a>
+    </td></tr></table>
+    <table role="presentation" width="100%" style="margin:0 0 18px;background:#fff8f3;border:1px solid #ffb98a;border-radius:8px"><tr><td style="padding:14px 18px;color:#7a3b10;font:14px/1.6 Arial,sans-serif">
+      <strong>Important:</strong> ${esc(TICKETING_NOTICE)}
     </td></tr></table>
     <p style="margin:0;color:#888;font:13px/1.6 Arial,sans-serif;text-align:center">This quote is an estimate of interest and is not a confirmed booking. Prices and availability are subject to change until your booking is finalised by FlyUp Line.</p>
   `)

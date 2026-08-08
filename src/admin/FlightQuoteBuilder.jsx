@@ -4,7 +4,8 @@ import { CURRENCIES, fromNow } from './ui.jsx'
 import MoneyInput from './MoneyInput.jsx'
 import SegmentEditor from './SegmentEditor.jsx'
 import { formatMoney } from '../lib/money.js'
-import { fmtDT, fmtDuration, durationMin, connectionInfo, segmentWarnings } from './flightUtils.js'
+import { fmtDT, fmtDuration, durationMin, connectionInfo, segmentWarnings, isoToLocalInput, localInputToIso, fmtStamp } from './flightUtils.js'
+import { loadQuoteDefaults } from '../pages/admin/Settings.jsx'
 
 /* ------------------------------------------------------------------ config */
 const TRIP_TYPES = [
@@ -42,7 +43,7 @@ const blankOption = (travelers = 1) => ({
 
 export function computeTotals(pricing = {}, travelers = 1) {
   const c = (k) => Number(pricing[k + '_cents']) || 0
-  const subtotal = c('base') + c('taxes') + c('service_fee') + c('additional') - c('discount')
+  const subtotal = c('base') + c('taxes') + c('additional') - c('discount')
   const t = Math.max(1, Number(travelers) || 1)
   let total_cents, per_traveler_cents
   if (pricing.mode === 'per_traveler') {
@@ -52,7 +53,7 @@ export function computeTotals(pricing = {}, travelers = 1) {
     total_cents = subtotal
     per_traveler_cents = Math.round(subtotal / t)
   }
-  return { total_cents, per_traveler_cents, remaining_cents: total_cents - c('deposit') }
+  return { total_cents, per_traveler_cents }
 }
 
 /* ------------------------------------------------------------------ Section */
@@ -154,7 +155,7 @@ function ServicesEditor({ services, onChange }) {
 }
 
 /* ------------------------------------------------------------------ Pricing */
-const PRICE_ROWS = [['base', 'Base fare'], ['taxes', 'Taxes & fees'], ['service_fee', 'Service fee'], ['additional', 'Additional charge'], ['discount', 'Discount']]
+const PRICE_ROWS = [['base', 'Base fare'], ['taxes', 'Taxes & fees'], ['additional', 'Additional charge'], ['discount', 'Discount']]
 function PricingPanel({ pricing, travelers, currency, onChange }) {
   const set = (patch) => onChange({ ...pricing, ...patch })
   const totals = computeTotals(pricing, travelers)
@@ -172,10 +173,6 @@ function PricingPanel({ pricing, travelers, currency, onChange }) {
           </label>
         ))}
         <label className="qb-field">
-          <span>Deposit required</span>
-          <MoneyInput cents={pricing.deposit_cents ?? null} currency={currency} onChange={(c) => set({ deposit_cents: c })} />
-        </label>
-        <label className="qb-field">
           <span>Payment deadline</span>
           <input type="date" value={pricing.payment_deadline || ''} onChange={(e) => set({ payment_deadline: e.target.value })} />
         </label>
@@ -183,7 +180,6 @@ function PricingPanel({ pricing, travelers, currency, onChange }) {
       <div className="price-totals">
         <div><span>Per traveller</span><strong>{formatMoney(totals.per_traveler_cents, currency)}</strong></div>
         <div className="big"><span>Total quote price</span><strong>{formatMoney(totals.total_cents, currency)}</strong></div>
-        {pricing.deposit_cents ? <div><span>Remaining balance</span><strong>{formatMoney(totals.remaining_cents, currency)}</strong></div> : null}
       </div>
     </div>
   )
@@ -265,8 +261,16 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
   // Initialise once from the draft that existed at mount.
   const initMeta = () =>
     draft
-      ? { currency: draft.currency || 'USD', expires_at: (draft.expires_at || '').slice(0, 10), booking_deadline: (draft.booking_deadline || '').slice(0, 10), note: draft.customer_message || '', terms: draft.terms || '' }
-      : { currency: 'USD', expires_at: '', booking_deadline: '', note: '', terms: '' }
+      ? { currency: draft.currency || 'USD', expires_at: isoToLocalInput(draft.expires_at), note: draft.customer_message || '', terms: draft.terms || '' }
+      : (() => {
+          // New quote: pre-fill from the admin's saved defaults (Settings).
+          const dft = loadQuoteDefaults()
+          const days = Number(dft.validityDays) || 3
+          const exp = new Date()
+          exp.setDate(exp.getDate() + days)
+          exp.setHours(23, 59, 0, 0)
+          return { currency: dft.currency || 'USD', expires_at: isoToLocalInput(exp.toISOString()), note: '', terms: dft.terms || '' }
+        })()
   const initOptions = () => {
     if (draft) {
       const rows = options.filter((o) => o.version_id === draft.id)
@@ -323,7 +327,7 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
     [options2]
   )
   const metaPayload = useCallback(
-    () => ({ currency: meta.currency, customer_message: meta.note || null, terms: meta.terms || null, expires_at: meta.expires_at || null, booking_deadline: meta.booking_deadline || null }),
+    () => ({ currency: meta.currency, customer_message: meta.note || null, terms: meta.terms || null, expires_at: localInputToIso(meta.expires_at) }),
     [meta]
   )
 
@@ -385,7 +389,7 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
   }
   const errorsByOption = options2.map(optionErrors)
   const missing = []
-  if (!meta.expires_at) missing.push('Quote expiration date')
+  if (!meta.expires_at) missing.push('Quote expiration date & time')
   if (options2.length === 0) missing.push('At least one option')
   errorsByOption.forEach((e, i) => Object.values(e).forEach((m) => missing.push(`Option ${i + 1}: ${m}`)))
   const canSend = missing.length === 0
@@ -411,7 +415,7 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
   const previewData = () => ({
     reference: request.reference, customerName: request.full_name,
     route: request.payload?.route, dates: request.payload?.dates, travelers: request.payload?.travelers,
-    version: { currency: meta.currency, customer_message: meta.note, terms: meta.terms, expires_at: meta.expires_at, booking_deadline: meta.booking_deadline },
+    version: { currency: meta.currency, customer_message: meta.note, terms: meta.terms, expires_at: localInputToIso(meta.expires_at) },
     options: optionsPayload().map((o) => ({ ...o, id: uid() })),
   })
   const doSend = async () => {
@@ -473,12 +477,9 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
             <label className="qb-field"><span>Currency*</span>
               <select value={meta.currency} onChange={(e) => patchMeta({ currency: e.target.value })}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
             </label>
-            <label className={`qb-field${triedSend && !meta.expires_at ? ' has-error' : ''}`}><span>Quote expires*</span>
-              <input type="date" value={meta.expires_at} onChange={(e) => patchMeta({ expires_at: e.target.value })} />
+            <label className={`qb-field${triedSend && !meta.expires_at ? ' has-error' : ''}`}><span>Quote expires (date &amp; time)*</span>
+              <input type="datetime-local" value={meta.expires_at} onChange={(e) => patchMeta({ expires_at: e.target.value })} />
               {triedSend && !meta.expires_at && <span className="field-error">Required</span>}
-            </label>
-            <label className="qb-field"><span>Booking deadline</span>
-              <input type="date" value={meta.booking_deadline} onChange={(e) => patchMeta({ booking_deadline: e.target.value })} />
             </label>
           </div>
           <div className="qb-optional-btns">
@@ -515,7 +516,7 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
           <dt>Options</dt><dd>{options2.length}</dd>
           <dt>Currency</dt><dd>{meta.currency}</dd>
           <dt>From total</dt><dd className="summary-total">{totalDisplay}</dd>
-          <dt>Expires</dt><dd>{meta.expires_at || <span className="muted">not set</span>}</dd>
+          <dt>Expires</dt><dd>{meta.expires_at ? fmtStamp(localInputToIso(meta.expires_at)) : <span className="muted">not set</span>}</dd>
         </dl>
         {missing.length > 0 && (
           <div className="summary-missing">
@@ -552,8 +553,7 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
               <dt>To</dt><dd>{request.email}</dd>
               <dt>Options</dt><dd>{options2.length}</dd>
               <dt>From total</dt><dd>{totalDisplay}</dd>
-              <dt>Expires</dt><dd>{meta.expires_at}</dd>
-              {meta.booking_deadline && <><dt>Book by</dt><dd>{meta.booking_deadline}</dd></>}
+              <dt>Expires</dt><dd>{fmtStamp(localInputToIso(meta.expires_at))}</dd>
             </dl>
             <div className="qb-actions">
               <button className="btn btn-ghost" onClick={() => setConfirm(false)} disabled={!!busy}>Cancel</button>

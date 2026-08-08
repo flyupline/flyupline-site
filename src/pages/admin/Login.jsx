@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../admin/AuthContext.jsx'
 
 export default function AdminLogin() {
-  const { login, resetPassword, session, isAdmin, loading } = useAuth()
+  const { login, resetPassword, sendMagicLink, session, isAdmin, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [mode, setMode] = useState('login') // 'login' | 'forgot'
@@ -25,6 +25,17 @@ export default function AdminLogin() {
     setBusy(false)
     if (error) return setError('Invalid email or password.')
     navigate('/admin', { replace: true })
+  }
+
+  const onMagic = async (e) => {
+    e.preventDefault()
+    setError('')
+    setNotice('')
+    setBusy(true)
+    const { error } = await sendMagicLink(email.trim())
+    setBusy(false)
+    if (error && error.status && error.status >= 500) return setError('Could not send the link. Please try again.')
+    setNotice('If an admin account exists for that email, a one-time sign-in link is on its way. Check your inbox.')
   }
 
   const onForgot = async (e) => {
@@ -55,11 +66,34 @@ export default function AdminLogin() {
             <span>Password</span>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
           </label>
+          {notice && <div className="admin-alert ok">{notice}</div>}
           <button type="submit" className="btn btn-primary btn-lg" disabled={busy} style={{ width: '100%' }}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
-          <button type="button" className="admin-link" onClick={() => { setMode('forgot'); setError(''); setNotice('') }}>
+          <div className="login-divider">or</div>
+          <button type="button" className="btn btn-ghost" style={{ width: '100%' }} onClick={() => { setMode('magic'); setError(''); setNotice('') }}>
+            Email me a sign-in link
+          </button>
+          <button type="button" className="admin-link login-link" onClick={() => { setMode('forgot'); setError(''); setNotice('') }}>
             Forgot password?
+          </button>
+        </form>
+      ) : mode === 'magic' ? (
+        <form className="admin-login-card" onSubmit={onMagic}>
+          <img src="/assets/img/logo2.png" alt="FlyUp Line" className="admin-login-logo" />
+          <h1>Sign in with a link</h1>
+          <p className="muted">No password needed — we'll email you a one-time secure link.</p>
+          {error && <div className="admin-alert error">{error}</div>}
+          {notice && <div className="admin-alert ok">{notice}</div>}
+          <label className="admin-field">
+            <span>Email</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
+          </label>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={busy} style={{ width: '100%' }}>
+            {busy ? 'Sending…' : 'Send sign-in link'}
+          </button>
+          <button type="button" className="admin-link login-link" onClick={() => { setMode('login'); setError(''); setNotice('') }}>
+            ← Back to sign in
           </button>
         </form>
       ) : (

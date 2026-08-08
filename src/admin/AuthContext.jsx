@@ -47,9 +47,12 @@ export function AuthProvider({ children }) {
   const resetPassword = (email) =>
     supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/admin/reset` })
   const updatePassword = (password) => supabase.auth.updateUser({ password })
+  // Passwordless sign-in. shouldCreateUser:false so only existing admins get a link.
+  const sendMagicLink = (email) =>
+    supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/admin` } })
 
   return (
-    <AuthCtx.Provider value={{ session, user: session?.user, isAdmin, loading, login, logout, resetPassword, updatePassword }}>
+    <AuthCtx.Provider value={{ session, user: session?.user, isAdmin, loading, login, logout, resetPassword, updatePassword, sendMagicLink }}>
       {children}
     </AuthCtx.Provider>
   )

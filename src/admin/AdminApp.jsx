@@ -6,6 +6,7 @@ import AdminLogin from '../pages/admin/Login.jsx'
 import ResetPassword from '../pages/admin/ResetPassword.jsx'
 import Dashboard from '../pages/admin/Dashboard.jsx'
 import RequestDetail from '../pages/admin/RequestDetail.jsx'
+import Settings from '../pages/admin/Settings.jsx'
 
 export default function AdminApp() {
   return (
@@ -22,6 +23,7 @@ export default function AdminApp() {
         >
           <Route index element={<Dashboard />} />
           <Route path="quotes/:id" element={<RequestDetail />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </AuthProvider>

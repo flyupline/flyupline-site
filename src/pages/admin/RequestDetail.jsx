@@ -60,6 +60,7 @@ export default function RequestDetail() {
 
   const r = d.request
   const p = r.payload || {}
+  const sentMessages = d.messages.filter((m) => m.sender === 'admin')
 
   return (
     <div className="admin-page detail">
@@ -114,22 +115,15 @@ export default function RequestDetail() {
             )}
           </section>
 
-          <section className="panel-card">
-            <h3>Customer conversation</h3>
-            <div className="msg-thread">
-              {d.messages.length === 0 && <p className="muted">No messages yet.</p>}
-              {d.messages.map((m) => (
-                <div key={m.id} className={`msg ${m.sender}`}>
-                  <div className="msg-meta">{m.sender === 'admin' ? m.author_name || 'FlyUp Line' : d.request.full_name || 'Customer'} · {fromNow(m.created_at)}</div>
-                  <div className="msg-body">{m.body}</div>
-                </div>
-              ))}
-            </div>
-            <div className="msg-compose">
-              <textarea rows={2} placeholder="Write a message to the customer (sent by email)…" value={reply} onChange={(e) => setReply(e.target.value)} />
-              <button className="btn btn-primary" disabled={!reply.trim() || busy === 'msg'} onClick={async () => { await act({ action: 'send_message', body: reply }, 'msg'); setReply('') }}>Send</button>
-            </div>
-          </section>
+          <Conversation
+            messages={d.messages}
+            customerName={r.full_name}
+            lastSentAt={sentMessages.length ? sentMessages[sentMessages.length - 1].created_at : null}
+            value={reply}
+            onChange={setReply}
+            busy={busy === 'msg'}
+            onSend={async () => { await act({ action: 'send_message', body: reply }, 'msg'); setReply('') }}
+          />
         </div>
 
         <aside className="detail-side">
@@ -238,5 +232,50 @@ function CustomerEditor({ r, onSave, busy }) {
         <button className="btn btn-primary" disabled={busy} onClick={async () => { await onSave(f); setEdit(false) }}>Save</button>
       </div>
     </div>
+  )
+}
+
+function Conversation({ messages, customerName, lastSentAt, value, onChange, busy, onSend }) {
+  // Number each admin message so follow-ups are easy to track.
+  let sent = 0
+  const numbered = messages.map((m) => (m.sender === 'admin' ? { ...m, n: ++sent } : m))
+  const received = messages.length - sent
+
+  return (
+    <section className="panel-card">
+      <div className="conv-head">
+        <h3>Customer conversation</h3>
+        <div className="conv-counts">
+          <span className="conv-chip sent">{sent} sent</span>
+          <span className="conv-chip recv">{received} received</span>
+          {lastSentAt && <span className="conv-last">last follow-up {fromNow(lastSentAt)}</span>}
+        </div>
+      </div>
+      <div className="msg-thread">
+        {messages.length === 0 && <p className="muted">No messages yet. Send the first follow-up below — it goes to the customer by email.</p>}
+        {numbered.map((m) => (
+          <div key={m.id} className={`msg ${m.sender}`}>
+            <div className="msg-meta">
+              {m.sender === 'admin'
+                ? <><span className="msg-tag">{m.n === 1 ? 'Message 1' : `Follow-up ${m.n - 1}`}</span> {m.author_name || 'FlyUp Line'}</>
+                : customerName || 'Customer'}
+              {' · '}{fmtDateTime(m.created_at)}
+            </div>
+            <div className="msg-body">{m.body}</div>
+          </div>
+        ))}
+      </div>
+      <div className="msg-compose">
+        <textarea
+          rows={2}
+          placeholder={sent === 0 ? 'Write a message to the customer (sent by email)…' : `Write follow-up ${sent} (sent by email)…`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button className="btn btn-primary" disabled={!value.trim() || busy} onClick={onSend}>
+          {busy ? 'Sending…' : sent === 0 ? 'Send message' : 'Send follow-up'}
+        </button>
+      </div>
+    </section>
   )
 }
