@@ -10,6 +10,8 @@ export default function ResetPassword() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
+  // Invited teammates get welcome copy; existing admins get reset copy.
+  const isInvite = typeof window !== 'undefined' && window.__authFlowType === 'invite'
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -30,21 +32,29 @@ export default function ResetPassword() {
         <img src="/assets/img/logo2.png" alt="FlyUp Line" className="admin-login-logo" />
         {done ? (
           <>
-            <h1>Password updated</h1>
-            <p className="muted">You're all set — redirecting you to the dashboard…</p>
+            <h1>{isInvite ? 'Welcome aboard' : 'Password updated'}</h1>
+            <p className="muted">You're all set — taking you to the dashboard…</p>
           </>
         ) : loading ? (
-          <p className="muted">Checking your reset link…</p>
+          <p className="muted">{isInvite ? 'Checking your invitation…' : 'Checking your reset link…'}</p>
         ) : !session ? (
           <>
             <h1>Link expired</h1>
-            <p className="muted">This password-reset link is invalid or has expired.</p>
-            <Link to="/admin/login" className="btn btn-primary btn-lg" style={{ width: '100%' }}>Request a new link</Link>
+            <p className="muted">
+              {isInvite
+                ? 'This invitation link is invalid or has expired. Ask your administrator to send a new one.'
+                : 'This password-reset link is invalid or has expired.'}
+            </p>
+            <Link to="/admin/login" className="btn btn-primary btn-lg" style={{ width: '100%' }}>Go to sign in</Link>
           </>
         ) : (
           <form onSubmit={onSubmit}>
-            <h1>Set a new password</h1>
-            <p className="muted">Choose a new password for your admin account.</p>
+            <h1>{isInvite ? 'Create your password' : 'Set a new password'}</h1>
+            <p className="muted">
+              {isInvite
+                ? "You've been invited to the FlyUp Line admin. Choose a password to finish setting up your account."
+                : 'Choose a new password for your admin account.'}
+            </p>
             {error && <div className="admin-alert error">{error}</div>}
             <label className="admin-field">
               <span>New password</span>
@@ -55,7 +65,7 @@ export default function ResetPassword() {
               <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
             </label>
             <button type="submit" className="btn btn-primary btn-lg" disabled={busy} style={{ width: '100%' }}>
-              {busy ? 'Updating…' : 'Update password'}
+              {busy ? 'Saving…' : isInvite ? 'Create password & continue' : 'Update password'}
             </button>
           </form>
         )}

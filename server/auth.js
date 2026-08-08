@@ -1,7 +1,9 @@
 import { adminDb } from './supabase.js'
+import { effectivePermissions } from './permissions.js'
 
 // Verifies the caller's Supabase access token AND that they are an admin.
-// Throws { status } on failure. Returns a service-role db client + admin info.
+// Throws { status } on failure. Returns a service-role db client + admin info
+// with the caller's effective permissions.
 export async function requireAdmin(req) {
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : ''
@@ -13,7 +15,7 @@ export async function requireAdmin(req) {
 
   const { data: adminRow } = await db
     .from('admin_users')
-    .select('user_id, full_name, role')
+    .select('user_id, full_name, role, permissions')
     .eq('user_id', userData.user.id)
     .maybeSingle()
 
@@ -24,6 +26,8 @@ export async function requireAdmin(req) {
     user: userData.user,
     admin: adminRow,
     adminName: adminRow.full_name || userData.user.email,
+    role: adminRow.role,
+    permissions: effectivePermissions(adminRow.role, adminRow.permissions),
   }
 }
 

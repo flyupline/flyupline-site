@@ -667,3 +667,47 @@
   .admin-nav { order: 3; flex-basis: 100%; margin: 2px 0 0; justify-content: flex-start; }
   .admin-topbar-right { gap: 10px; }
 }
+
+/* ---------- people management ---------- */
+.people-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.people-stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; color: var(--text-3); font-size: 0.8rem; }
+.people-stat span { display: block; font-family: var(--font-head); font-weight: 700; font-size: 1.5rem; color: var(--text); margin-bottom: 2px; }
+
+.people-list { display: flex; flex-direction: column; gap: 10px; }
+.person { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface-2); }
+.person.open { border-color: rgba(255,97,0,0.4); }
+.person.suspended { opacity: 0.75; }
+.person-head { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 13px 15px; }
+.person-head:hover { background: rgba(255,255,255,0.03); }
+.person-id { min-width: 0; flex: 1; }
+.person-name { display: block; font-family: var(--font-head); font-size: 0.95rem; overflow-wrap: anywhere; }
+.person-email { display: block; color: var(--text-3); font-size: 0.8rem; overflow-wrap: anywhere; }
+.person-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.person-caret { color: var(--brand-2); flex-shrink: 0; }
+.team-badge.danger { color: #fca5a5; border-color: rgba(239,68,68,0.45); }
+.team-badge.role-owner { color: var(--brand-2); border-color: rgba(255,97,0,0.4); }
+.team-badge.role-moderator { color: #93c5fd; border-color: rgba(96,165,250,0.4); }
+
+.person-body { padding: 16px 15px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 18px; }
+.person-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 20px; }
+.person-info dt { color: var(--text-3); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+.person-info dd { font-size: 0.9rem; overflow-wrap: anywhere; }
+.person-info .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; color: var(--text-3); }
+
+.perm-block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px; }
+.perm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.perm-head h5 { font-family: var(--font-head); font-size: 0.92rem; margin-bottom: 3px; }
+.perm-head p { color: var(--text-3); font-size: 0.8rem; }
+.perm-head select { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); padding: 9px 12px; font-size: 0.88rem; }
+.perm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 9px 18px; margin-bottom: 12px; }
+.perm-item { display: flex; align-items: flex-start; gap: 9px; font-size: 0.86rem; color: var(--text-2); cursor: pointer; }
+.perm-item input { margin-top: 3px; accent-color: var(--brand); }
+.perm-item.overridden span { color: var(--brand-2); }
+.perm-item em { font-style: normal; font-size: 0.72rem; opacity: 0.8; }
+
+.person-controls { display: flex; flex-direction: column; gap: 12px; }
+.person-rename { display: flex; gap: 8px; flex-wrap: wrap; }
+.person-rename input { flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); padding: 9px 12px; font-size: 0.9rem; }
+.person-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.person-actions select { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); padding: 7px 10px; font-size: 0.82rem; }
+.team-remove.warn:hover { border-color: #eab308; color: #eab308; }

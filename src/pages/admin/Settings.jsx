@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/adminApi.js'
 import { useAuth } from '../../admin/AuthContext.jsx'
-import { fmtDate, fmtDateTime, fromNow, STATUS_META } from '../../admin/ui.jsx'
+import { fmtDate, fmtDateTime, fromNow } from '../../admin/ui.jsx'
 
-/* ------------------------------------------------------------- shared bits */
+/* Quote defaults are kept per-device so new quotes still pre-fill sensibly. */
 const DEFAULTS_KEY = 'flyupline.quoteDefaults'
 export function loadQuoteDefaults() {
   try {
@@ -43,14 +43,13 @@ const Field = ({ label, hint, children }) => (
   </label>
 )
 
-const Card = ({ title, desc, children, footer }) => (
+const Card = ({ title, desc, children }) => (
   <section className="set-card">
     <header className="set-card-head">
       <h3>{title}</h3>
       {desc && <p>{desc}</p>}
     </header>
     <div className="set-card-body">{children}</div>
-    {footer && <footer className="set-card-foot">{footer}</footer>}
   </section>
 )
 
@@ -118,7 +117,7 @@ function AccountTab({ me, onRenamed }) {
             <Field label="Display name">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kirolos" />
             </Field>
-            <Field label="Email address" hint="Your sign-in address. Contact support to change it.">
+            <Field label="Email address" hint="Your sign-in address.">
               <input value={user?.email || ''} disabled />
             </Field>
             <button className="btn btn-primary" disabled={savingName || !name.trim()}>
@@ -147,21 +146,144 @@ function AccountTab({ me, onRenamed }) {
 }
 
 /* ------------------------------------------------------------------- PEOPLE */
-function PeopleTab({ members, reload }) {
+const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', moderator: 'Moderator' }
+const ROLE_HINT = {
+  owner: 'Full control, including people & permissions.',
+  admin: 'Manage requests and send quotes. Cannot manage people.',
+  moderator: 'View requests and prepare drafts. Cannot send quotes.',
+}
+
+function PersonRow({ m, busy, onAct, expanded, onToggle, capabilities, roleDefaults, canManage }) {
+  const [rename, setRename] = useState(m.full_name || '')
+  useEffect(() => setRename(m.full_name || ''), [m.full_name])
+  const defaults = roleDefaults?.[m.role] || {}
+
+  return (
+    <div className={`person${expanded ? ' open' : ''}${m.suspended ? ' suspended' : ''}`}>
+      <button className="person-head" onClick={onToggle} aria-expanded={expanded}>
+        <span className="team-avatar">{(m.full_name || m.email || '?').slice(0, 2).toUpperCase()}</span>
+        <span className="person-id">
+          <span className="person-name">{m.full_name || m.email}</span>
+          <span className="person-email">{m.email}</span>
+        </span>
+        <span className="person-tags">
+          <span className={`team-badge role-${m.role}`}>{ROLE_LABEL[m.role] || m.role}</span>
+          {m.is_you && <span className="team-badge you">You</span>}
+          {m.suspended && <span className="team-badge danger">Suspended</span>}
+          {!m.last_sign_in_at && !m.suspended && <span className="team-badge pending">Pending</span>}
+        </span>
+        <span className="person-caret">{expanded ? '▾' : '▸'}</span>
+      </button>
+
+      {expanded && (
+        <div className="person-body">
+          <dl className="person-info">
+            <div><dt>Email</dt><dd>{m.email}</dd></div>
+            <div><dt>Role</dt><dd>{ROLE_LABEL[m.role] || m.role}</dd></div>
+            <div><dt>Status</dt><dd>{m.suspended ? 'Suspended' : m.last_sign_in_at ? 'Active' : 'Invitation pending'}</dd></div>
+            <div><dt>Last sign-in</dt><dd>{m.last_sign_in_at ? `${fmtDateTime(m.last_sign_in_at)} (${fromNow(m.last_sign_in_at)})` : 'Never'}</dd></div>
+            <div><dt>Given access</dt><dd>{fmtDate(m.created_at)}</dd></div>
+            {m.account_created_at && <div><dt>Account created</dt><dd>{fmtDate(m.account_created_at)}</dd></div>}
+            <div><dt>Email confirmed</dt><dd>{m.confirmed ? 'Yes' : 'Not yet'}</dd></div>
+            <div><dt>Sign-in method</dt><dd>{m.provider}</dd></div>
+            {m.phone && <div><dt>Phone</dt><dd>{m.phone}</dd></div>}
+            <div><dt>User ID</dt><dd className="mono">{m.user_id}</dd></div>
+          </dl>
+
+          {canManage && (
+            <div className="perm-block">
+              <div className="perm-head">
+                <div>
+                  <h5>Role &amp; permissions</h5>
+                  <p>{ROLE_HINT[m.role]}</p>
+                </div>
+                <select value={m.role} disabled={busy} onChange={(e) => onAct('set_role', { role: e.target.value })}>
+                  <option value="moderator">Moderator</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+              <div className="perm-grid">
+                {(capabilities || []).map((c) => {
+                  const on = !!m.permissions?.[c.key]
+                  const overridden = c.key in (m.overrides || {})
+                  return (
+                    <label key={c.key} className={`perm-item${overridden ? ' overridden' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={busy}
+                        onChange={(e) => onAct('set_permission', { capability: c.key, value: e.target.checked })}
+                      />
+                      <span>
+                        {c.label}
+                        {overridden && <em> · custom</em>}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              {Object.keys(m.overrides || {}).length > 0 && (
+                <button className="team-remove" disabled={busy} onClick={() => onAct('reset_permissions')}>
+                  Reset to {ROLE_LABEL[m.role]} defaults
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="person-controls">
+            <div className="person-rename">
+              <input value={rename} onChange={(e) => setRename(e.target.value)} placeholder="Display name" />
+              <button className="team-remove" disabled={busy || !rename.trim() || rename === m.full_name} onClick={() => onAct('rename', { full_name: rename })}>
+                Save name
+              </button>
+            </div>
+
+            <div className="person-actions">
+              <button className="team-remove" disabled={busy} onClick={() => onAct('resend')}>Send sign-in link</button>
+              <button className="team-remove" disabled={busy} onClick={() => onAct('reset_password')}>Send password reset</button>
+              {!m.is_you && (
+                <>
+                  {m.suspended ? (
+                    <button className="team-remove" disabled={busy} onClick={() => onAct('unsuspend')}>Reinstate</button>
+                  ) : (
+                    <button className="team-remove warn" disabled={busy} onClick={() => onAct('suspend', null, `Suspend ${m.email}? They will be signed out and blocked from signing in until reinstated.`)}>
+                      Suspend
+                    </button>
+                  )}
+                  <button className="team-remove danger" disabled={busy} onClick={() => onAct('remove', null, `Remove admin access for ${m.email}? Their account stays, but they can no longer sign in to the admin area.`)}>
+                    Remove access
+                  </button>
+                  <button className="team-remove danger" disabled={busy} onClick={() => onAct('delete_user', null, `Permanently delete the account for ${m.email}? This cannot be undone.`)}>
+                    Delete account
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PeopleTab({ members, reload, capabilities, roleDefaults, canManage }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [role, setRole] = useState('moderator')
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState('')
+  const [openId, setOpenId] = useState(null)
   const [msg, flash] = useFlash()
 
   const invite = async (e) => {
     e.preventDefault()
     setBusy('invite')
     try {
-      const r = await apiPost('/api/admin/team', { action: 'invite', email, full_name: name })
+      const r = await apiPost('/api/admin/team', { action: 'invite', email, full_name: name, role })
       setEmail('')
       setName('')
-      flash(r.reinstated ? 'Admin access restored — a sign-in link was emailed.' : 'Invite sent. They’ll receive a secure link to set their password.')
+      flash(r.reinstated ? 'Access restored — a sign-in link was emailed.' : 'Invite sent. They’ll get a secure link to create their password and sign in.')
       reload()
     } catch (err) {
       flash(err.message || 'Could not send the invite.', false)
@@ -170,12 +292,22 @@ function PeopleTab({ members, reload }) {
     }
   }
 
-  const act = async (m, action) => {
-    if (action === 'remove' && !confirm(`Remove admin access for ${m.email}? They will no longer be able to sign in.`)) return
+  const act = (m) => async (action, extra, confirmText) => {
+    if (confirmText && !confirm(confirmText)) return
     setBusy(m.user_id)
     try {
-      await apiPost('/api/admin/team', action === 'remove' ? { action: 'remove', userId: m.user_id } : { action: 'resend', email: m.email })
-      flash(action === 'remove' ? 'Admin access removed.' : 'A fresh sign-in link was emailed.')
+      await apiPost('/api/admin/team', { action, userId: m.user_id, email: m.email, ...(extra || {}) })
+      const done = {
+        rename: 'Name updated.',
+        set_role: 'Role updated.',
+        resend: 'Sign-in link emailed.',
+        reset_password: 'Password-reset email sent.',
+        suspend: 'Account suspended.',
+        unsuspend: 'Account reinstated.',
+        remove: 'Admin access removed.',
+        delete_user: 'Account deleted.',
+      }
+      flash(done[action] || 'Done.')
       reload()
     } catch (err) {
       flash(err.message || 'Action failed.', false)
@@ -187,216 +319,63 @@ function PeopleTab({ members, reload }) {
   const shown = members.filter(
     (m) => !q || (m.email || '').toLowerCase().includes(q.toLowerCase()) || (m.full_name || '').toLowerCase().includes(q.toLowerCase())
   )
+  const active = members.filter((m) => m.last_sign_in_at && !m.suspended).length
   const pending = members.filter((m) => !m.last_sign_in_at).length
+  const suspended = members.filter((m) => m.suspended).length
 
-  return (
-    <div className="set-grid wide">
-      <Card
-        title={`Team members (${members.length})`}
-        desc={pending ? `${pending} invitation${pending === 1 ? '' : 's'} not yet accepted.` : 'Everyone here can sign in and manage quotes.'}
-      >
-        <Flash msg={msg} />
-        {members.length > 4 && (
-          <input className="set-search" placeholder="Search people…" value={q} onChange={(e) => setQ(e.target.value)} />
-        )}
-        <div className="team-list">
-          {members.length === 0 && <p className="muted">Loading team…</p>}
-          {shown.map((m) => (
-            <div className="team-row" key={m.user_id}>
-              <div className="team-avatar">{(m.full_name || m.email || '?').slice(0, 2).toUpperCase()}</div>
-              <div className="team-info">
-                <div className="team-email">{m.full_name || m.email}</div>
-                <div className="team-meta">
-                  {m.full_name ? `${m.email} · ` : ''}added {fmtDate(m.created_at)}
-                  {m.last_sign_in_at ? ` · active ${fromNow(m.last_sign_in_at)}` : ' · never signed in'}
-                </div>
-              </div>
-              <div className="team-tags">
-                <span className="team-badge">{m.role === 'owner' ? 'Owner' : 'Admin'}</span>
-                {m.is_you && <span className="team-badge you">You</span>}
-                {!m.last_sign_in_at && <span className="team-badge pending">Pending</span>}
-              </div>
-              {!m.is_you && (
-                <div className="team-actions">
-                  <button className="team-remove" disabled={busy === m.user_id} onClick={() => act(m, 'resend')}>Send link</button>
-                  <button className="team-remove danger" disabled={busy === m.user_id} onClick={() => act(m, 'remove')}>Remove</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card title="Invite someone" desc="They’ll get an email with a secure magic link to set their password and join.">
-        <form className="set-form" onSubmit={invite}>
-          <Field label="Email address">
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@flyupline.com" />
-          </Field>
-          <Field label="Their name" hint="Optional — shown on quotes they send.">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sara" />
-          </Field>
-          <button className="btn btn-primary" disabled={busy === 'invite' || !email}>
-            {busy === 'invite' ? 'Sending…' : 'Send invite'}
-          </button>
-        </form>
-      </Card>
-    </div>
-  )
-}
-
-/* ----------------------------------------------------------------- BUSINESS */
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AED', 'EGP', 'SAR']
-
-function BusinessTab({ settings, save, saving }) {
-  const [b, setB] = useState(settings.business || {})
-  useEffect(() => setB(settings.business || {}), [settings.business])
-  const set = (k) => (e) => setB({ ...b, [k]: e.target.value })
-
-  return (
-    <div className="set-grid">
-      <Card title="Business profile" desc="Used on your quotes and customer emails so everyone sends consistent details.">
-        <form
-          className="set-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            save({ business: b })
-          }}
-        >
-          <Field label="Business name"><input value={b.name || ''} onChange={set('name')} placeholder="FlyUp Line" /></Field>
-          <Field label="Booking email"><input type="email" value={b.email || ''} onChange={set('email')} placeholder="flyupline.booking@gmail.com" /></Field>
-          <div className="set-row">
-            <Field label="Phone"><input value={b.phone || ''} onChange={set('phone')} placeholder="+20 120 529 5295" /></Field>
-            <Field label="Alternate phone"><input value={b.phone_alt || ''} onChange={set('phone_alt')} placeholder="Optional" /></Field>
-          </div>
-          <Field label="Website"><input value={b.website || ''} onChange={set('website')} placeholder="https://flyupline.com" /></Field>
-          <Field label="Opening hours"><input value={b.hours || ''} onChange={set('hours')} placeholder="24 / 7" /></Field>
-          <Field label="Address"><textarea rows={2} value={b.address || ''} onChange={set('address')} placeholder="Optional" /></Field>
-          <button className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save business profile'}</button>
-        </form>
-      </Card>
-    </div>
-  )
-}
-
-/* ----------------------------------------------------------------- DEFAULTS */
-function DefaultsTab({ settings, save, saving }) {
-  const [d, setD] = useState({ currency: 'USD', validityDays: 3, expiryTime: '23:59', terms: '', ...(settings.quote_defaults || {}) })
-  useEffect(() => setD((prev) => ({ ...prev, ...(settings.quote_defaults || {}) })), [settings.quote_defaults])
-
-  return (
-    <div className="set-grid">
-      <Card title="Quote defaults" desc="Every new quote starts with these, so you type less. Shared with your whole team.">
-        <form
-          className="set-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            save({ quote_defaults: d })
-          }}
-        >
-          <div className="set-row">
-            <Field label="Default currency">
-              <select value={d.currency} onChange={(e) => setD({ ...d, currency: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="Valid for (days)" hint="Sets the expiry date on new quotes.">
-              <input type="number" min="1" max="120" value={d.validityDays} onChange={(e) => setD({ ...d, validityDays: Number(e.target.value) || 1 })} />
-            </Field>
-            <Field label="Expiry time" hint="Time of day the quote lapses.">
-              <input type="time" value={d.expiryTime || '23:59'} onChange={(e) => setD({ ...d, expiryTime: e.target.value })} />
-            </Field>
-          </div>
-          <Field label="Default terms & conditions" hint="Appears on every quote unless you change it while building.">
-            <textarea rows={5} value={d.terms || ''} onChange={(e) => setD({ ...d, terms: e.target.value })} placeholder="Optional" />
-          </Field>
-          <button className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save defaults'}</button>
-        </form>
-      </Card>
-
-      <Card title="Always included" desc="This notice is shown on every quote and in every quote email. It can’t be removed.">
-        <div className="set-readonly">
-          Please note that the price of the tickets and the availability of seats are not guaranteed until ticketed.
-          Please approve at the earliest to proceed.
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------------- SYSTEM */
-function StatusPill({ ok, label }) {
-  return (
-    <span className={`sys-pill ${ok === null ? 'unknown' : ok ? 'ok' : 'bad'}`}>
-      <span className="dot" />
-      {label}
-    </span>
-  )
-}
-
-function SystemTab({ stats, health }) {
-  const s = stats || {}
-  const byStatus = s.byStatus || {}
-  const cards = [
-    { label: 'Total requests', value: s.total || 0 },
-    { label: 'Quotes sent', value: s.quotesSent || 0 },
-    { label: 'Accepted', value: byStatus.accepted || 0 },
-    { label: 'Booked', value: byStatus.booked || 0 },
-    { label: 'Awaiting reply', value: (byStatus.quote_sent || 0) + (byStatus.viewed || 0) },
-    { label: 'Team members', value: s.admins || 0 },
-  ]
   return (
     <>
-      <div className="sys-stats">
-        {cards.map((c) => (
-          <div className="sys-stat" key={c.label}>
-            <span className="sys-num">{c.value}</span>
-            <span className="sys-label">{c.label}</span>
-          </div>
-        ))}
+      <div className="people-stats">
+        <div className="people-stat"><span>{members.length}</span>Total</div>
+        <div className="people-stat"><span>{active}</span>Active</div>
+        <div className="people-stat"><span>{pending}</span>Pending</div>
+        <div className="people-stat"><span>{suspended}</span>Suspended</div>
       </div>
 
-      <div className="set-grid">
-        <Card title="Service health" desc="Live status of the systems that power your quotes.">
-          <div className="sys-rows">
-            <div className="sys-row">
-              <div><strong>Database</strong><span>Stores requests, quotes and activity</span></div>
-              <StatusPill ok={health?.database} label={health?.database ? 'Connected' : 'Unavailable'} />
-            </div>
-            <div className="sys-row">
-              <div><strong>Email delivery</strong><span>{health?.fromEmail || 'Sends quotes and notifications'}</span></div>
-              <StatusPill ok={health?.email} label={health?.email ? 'Active' : 'Not configured'} />
-            </div>
-            <div className="sys-row">
-              <div><strong>Scheduled maintenance</strong><span>{health?.cron?.schedule ? `Runs hourly (${health.cron.schedule}) — expires old quotes` : 'Expires old quotes automatically'}</span></div>
-              <StatusPill ok={health?.cron?.enabled ?? null} label={health?.cron?.enabled ? 'Running' : health?.cron?.enabled === false ? 'Stopped' : 'Unknown'} />
-            </div>
-            <div className="sys-row">
-              <div><strong>Public site</strong><span>{health?.siteUrl || '—'}</span></div>
-              <StatusPill ok={Boolean(health?.siteUrl)} label={health?.siteUrl ? 'Live' : 'Unknown'} />
-            </div>
+      <div className="set-grid wide">
+        <Card title="People with admin access" desc="Open anyone to see their full details and manage their access.">
+          <Flash msg={msg} />
+          {members.length > 3 && (
+            <input className="set-search" placeholder="Search by name or email…" value={q} onChange={(e) => setQ(e.target.value)} />
+          )}
+          <div className="people-list">
+            {members.length === 0 && <p className="muted">Loading people…</p>}
+            {shown.map((m) => (
+              <PersonRow
+                key={m.user_id}
+                m={m}
+                busy={busy === m.user_id}
+                onAct={act(m)}
+                expanded={openId === m.user_id}
+                onToggle={() => setOpenId(openId === m.user_id ? null : m.user_id)}
+                capabilities={capabilities}
+                roleDefaults={roleDefaults}
+                canManage={canManage}
+              />
+            ))}
+            {members.length > 0 && shown.length === 0 && <p className="muted">No one matches “{q}”.</p>}
           </div>
         </Card>
 
-        <Card title="Request breakdown" desc="Where every request currently sits.">
-          <div className="sys-breakdown">
-            {Object.entries(byStatus).length === 0 && <p className="muted">No requests yet.</p>}
-            {Object.entries(byStatus)
-              .sort((a, b) => b[1] - a[1])
-              .map(([k, v]) => (
-                <div className="sys-bd-row" key={k}>
-                  <span className="sys-bd-dot" style={{ background: STATUS_META[k]?.color || '#888' }} />
-                  <span className="sys-bd-label">{STATUS_META[k]?.label || k}</span>
-                  <span className="sys-bd-val">{v}</span>
-                </div>
-              ))}
-            {s.archived > 0 && (
-              <div className="sys-bd-row">
-                <span className="sys-bd-dot" style={{ background: '#555' }} />
-                <span className="sys-bd-label">Archived</span>
-                <span className="sys-bd-val">{s.archived}</span>
-              </div>
-            )}
-          </div>
+        <Card title="Invite someone" desc="They’ll get an email with a secure magic link to set their password and join.">
+          <form className="set-form" onSubmit={invite}>
+            <Field label="Email address">
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@flyupline.com" />
+            </Field>
+            <Field label="Their name" hint="Optional — shown on quotes they send.">
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sara" />
+            </Field>
+            <Field label="Role" hint={ROLE_HINT[role]}>
+              <select value={role} onChange={(e) => setRole(e.target.value)}>
+                <option value="moderator">Moderator</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+            </Field>
+            <button className="btn btn-primary" disabled={busy === 'invite' || !email}>
+              {busy === 'invite' ? 'Sending…' : 'Send invite'}
+            </button>
+          </form>
         </Card>
       </div>
     </>
@@ -407,9 +386,6 @@ function SystemTab({ stats, health }) {
 const TABS = [
   { id: 'account', label: 'Account' },
   { id: 'people', label: 'People' },
-  { id: 'business', label: 'Business' },
-  { id: 'defaults', label: 'Quote defaults' },
-  { id: 'system', label: 'System' },
 ]
 
 export default function Settings() {
@@ -419,51 +395,25 @@ export default function Settings() {
   const setTab = (id) => setParams(id === 'account' ? {} : { tab: id }, { replace: true })
 
   const [members, setMembers] = useState([])
-  const [settings, setSettings] = useState({ business: {}, quote_defaults: {} })
-  const [stats, setStats] = useState(null)
-  const [health, setHealth] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [msg, flash] = useFlash()
+  const [capabilities, setCapabilities] = useState([])
+  const [roleDefaults, setRoleDefaults] = useState({})
+  const [meCtx, setMeCtx] = useState(null)
 
   const loadTeam = useCallback(async () => {
     try {
-      const { members } = await apiGet('/api/admin/team')
-      setMembers(members)
+      const r = await apiGet('/api/admin/team')
+      setMembers(r.members)
+      setCapabilities(r.capabilities || [])
+      setRoleDefaults(r.roleDefaults || {})
+      setMeCtx(r.me || null)
     } catch {
-      /* handled by tab UI */
-    }
-  }, [])
-
-  const loadSettings = useCallback(async () => {
-    try {
-      const r = await apiGet('/api/admin/settings')
-      setSettings(r.settings)
-      setStats(r.stats)
-      setHealth(r.health)
-      cacheQuoteDefaults(r.settings.quote_defaults)
-    } catch {
-      /* handled by tab UI */
+      /* surfaced in the tab UI */
     }
   }, [])
 
   useEffect(() => {
     loadTeam()
-    loadSettings()
-  }, [loadTeam, loadSettings])
-
-  const save = async (patch) => {
-    setSaving(true)
-    try {
-      const r = await apiPost('/api/admin/settings', patch)
-      setSettings(r.settings)
-      cacheQuoteDefaults(r.settings.quote_defaults)
-      flash('Saved.')
-    } catch (err) {
-      flash(err.message || 'Could not save.', false)
-    } finally {
-      setSaving(false)
-    }
-  }
+  }, [loadTeam])
 
   const me = members.find((m) => m.is_you) || { full_name: '', role: 'admin' }
 
@@ -471,7 +421,7 @@ export default function Settings() {
     <div className="admin-page settings-page">
       <div className="admin-page-head">
         <h1>Settings</h1>
-        <p className="muted">Your account, your team, and how FlyUp Line quotes behave.</p>
+        <p className="muted">Your account and the people who can access this admin.</p>
       </div>
 
       <div className="set-shell">
@@ -485,14 +435,15 @@ export default function Settings() {
         </nav>
 
         <div className="set-content">
-          <Flash msg={msg} />
           {tab === 'account' && <AccountTab me={{ ...me, email: user?.email }} onRenamed={loadTeam} />}
-          {tab === 'people' && <PeopleTab members={members} reload={loadTeam} />}
-          {tab === 'business' && <BusinessTab settings={settings} save={save} saving={saving} />}
-          {tab === 'defaults' && <DefaultsTab settings={settings} save={save} saving={saving} />}
-          {tab === 'system' && <SystemTab stats={stats} health={health} />}
-          {settings.updated_at && (tab === 'business' || tab === 'defaults') && (
-            <p className="set-updated">Last updated {fmtDateTime(settings.updated_at)}</p>
+          {tab === 'people' && (
+            <PeopleTab
+              members={members}
+              reload={loadTeam}
+              capabilities={capabilities}
+              roleDefaults={roleDefaults}
+              canManage={!!meCtx?.permissions?.['team.manage']}
+            />
           )}
         </div>
       </div>

@@ -2211,3 +2211,99 @@ h6 {
   color: var(--text-3);
   font-family: var(--font-head);
 }
+
+/* --------------------------------------------------------------------------
+   Light theme — same brand, inverted surfaces. Applied by the theme toggle
+   (data-theme="light" on <html>); dark stays the default.
+   -------------------------------------------------------------------------- */
+:root[data-theme='light'] {
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #f1f1f3;
+  --line: rgba(10, 10, 11, 0.10);
+  --line-strong: rgba(10, 10, 11, 0.18);
+
+  --text: #15151a;
+  --text-2: rgba(20, 20, 26, 0.72);
+  --text-3: rgba(20, 20, 26, 0.52);
+
+  --brand-soft: rgba(255, 97, 0, 0.10);
+  --shadow-1: 0 18px 38px -26px rgba(10, 10, 20, 0.35);
+  --glow: 0 12px 30px -14px rgba(255, 97, 0, 0.4);
+
+  color-scheme: light;
+}
+
+/* Amber reads poorly on white — use the stronger brand orange for accents. */
+:root[data-theme='light'] {
+  --brand-2: #d94f00;
+}
+
+/* Smooth, non-jarring theme change */
+:root[data-theme] body,
+:root[data-theme] .site-header,
+:root[data-theme] .admin-topbar {
+  transition: background-color 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+
+/* Surfaces that were hard-coded dark need light equivalents */
+:root[data-theme='light'] .site-header.scrolled { background: rgba(255, 255, 255, 0.88); }
+:root[data-theme='light'] .mobile-menu { background: rgba(255, 255, 255, 0.97); }
+:root[data-theme='light'] .site-footer { background: #ffffff; }
+:root[data-theme='light'] .admin-topbar { background: rgba(255, 255, 255, 0.9); }
+:root[data-theme='light'] .qb-actionbar { background: rgba(255, 255, 255, 0.94); }
+:root[data-theme='light'] .q-header { background: rgba(255, 255, 255, 0.92); }
+:root[data-theme='light'] .admin-login { background: radial-gradient(closest-side at 50% 0, rgba(255, 97, 0, 0.10), transparent 70%), var(--bg); }
+:root[data-theme='light'] .preview-overlay { background: rgba(20, 20, 26, 0.45); }
+:root[data-theme='light'] .notif-item.unread { background: rgba(255, 97, 0, 0.09); }
+:root[data-theme='light'] .admin-table tbody tr:hover,
+:root[data-theme='light'] .person-head:hover,
+:root[data-theme='light'] .notif-item:hover { background: rgba(10, 10, 11, 0.035); }
+:root[data-theme='light'] .qb-option2 { background: rgba(10, 10, 11, 0.015); }
+:root[data-theme='light'] .set-card-foot { background: rgba(10, 10, 11, 0.02); }
+:root[data-theme='light'] .set-tabs button:hover,
+:root[data-theme='light'] .admin-nav a:hover { background: rgba(10, 10, 11, 0.05); }
+:root[data-theme='light'] .money-input input,
+:root[data-theme='light'] .airline-input input { color-scheme: light; }
+:root[data-theme='light'] .field input,
+:root[data-theme='light'] .field select,
+:root[data-theme='light'] .field textarea,
+:root[data-theme='light'] .admin-field input,
+:root[data-theme='light'] .qb-field input,
+:root[data-theme='light'] .qb-field select,
+:root[data-theme='light'] .qb-field textarea,
+:root[data-theme='light'] .set-field input,
+:root[data-theme='light'] .set-field select,
+:root[data-theme='light'] .set-field textarea,
+:root[data-theme='light'] .admin-toolbar input,
+:root[data-theme='light'] .admin-toolbar select { color-scheme: light; }
+:root[data-theme='light'] .hero-scrim {
+  background: linear-gradient(180deg, rgba(10,10,11,0.45) 0%, rgba(10,10,11,0.28) 45%, var(--bg) 100%),
+              linear-gradient(100deg, rgba(10,10,11,0.6) 0%, rgba(10,10,11,0.08) 60%);
+}
+:root[data-theme='light'] .page-hero .scrim { background: linear-gradient(180deg, rgba(10,10,11,0.62) 0%, var(--bg) 100%); }
+:root[data-theme='light'] .dest-card::after { background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.78) 100%); }
+:root[data-theme='light'] .badge-card { background: rgba(255,255,255,0.9); }
+:root[data-theme='light'] .cta-band::before { background: radial-gradient(closest-side, rgba(255,97,0,0.12), transparent 70%); }
+:root[data-theme='light'] .step-card .num { -webkit-text-stroke-color: rgba(255,97,0,0.6); }
+:root[data-theme='light'] .btn-ghost { background: rgba(10,10,11,0.02); }
+:root[data-theme='light'] .qd-services li.inc { color: #15803d; border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.09); }
+:root[data-theme='light'] .sys-pill.ok { color: #15803d; }
+:root[data-theme='light'] .team-badge.role-moderator { color: #1d4ed8; }
+:root[data-theme='light'] .conv-chip.recv { color: #15803d; }
+:root[data-theme='light'] .error-notice { background: rgba(220,90,90,0.10); color: #8a1c1c; }
+:root[data-theme='light'] .admin-alert.error { color: #8a1c1c; }
+:root[data-theme='light'] .admin-alert.ok { color: #14532d; }
+
+/* Theme toggle button */
+.theme-toggle {
+  width: 40px; height: 40px; border-radius: var(--radius-full);
+  border: 1px solid var(--line); color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color var(--t-fast), color var(--t-fast), background-color var(--t-fast);
+  flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--brand); color: var(--brand-2); }
+.theme-toggle svg { width: 18px; height: 18px; }
+.site-header .theme-toggle { margin-right: 4px; }
+@media (max-width: 991px) { .site-header .theme-toggle { margin-right: 8px; } }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { IconMenu, IconX, IconPhone, IconMail } from './ui/Icons.jsx'
+import ThemeToggle from './ui/ThemeToggle.jsx'
 
 const navItems = [
   { to: '/', label: 'Home' },
@@ -47,6 +48,7 @@ export default function Header() {
             ))}
           </nav>
           <div className="header-actions">
+            <ThemeToggle />
             <Link to="/flight-booking" className="btn btn-primary">Request a Flight Quote</Link>
             <button className="menu-btn" aria-label="Open menu" onClick={() => setOpen(true)}>
               <IconMenu />
@@ -58,9 +60,12 @@ export default function Header() {
       <div className={`mobile-menu${open ? ' open' : ''}`} aria-hidden={!open}>
         <div className="top">
           <img src="/assets/img/logo2.png" alt="FlyUp Line" />
-          <button className="menu-btn" aria-label="Close menu" onClick={() => setOpen(false)}>
-            <IconX />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ThemeToggle />
+            <button className="menu-btn" aria-label="Close menu" onClick={() => setOpen(false)}>
+              <IconX />
+            </button>
+          </div>
         </div>
         <nav aria-label="Mobile">
           {navItems.map(({ to, label }) => (

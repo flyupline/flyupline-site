@@ -1,6 +1,7 @@
 import { requireAdmin, sendError } from '../../server/auth.js'
 import { logActivity, readBody, genToken, SITE_URL } from '../../server/util.js'
 import { sendEmail, quoteEmailHtml } from '../../server/email.js'
+import { requireCap } from '../../server/permissions.js'
 
 const num = (v) => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v))
 const firstName = (full) => (full || '').trim().split(/\s+/)[0] || ''
@@ -40,7 +41,8 @@ async function replaceOptions(db, versionId, requestId, options) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
-    const { db, user, adminName } = await requireAdmin(req)
+    const ctx = await requireAdmin(req)
+    const { db, user, adminName } = ctx
     const body = readBody(req)
     const { action, requestId } = body
 
@@ -49,6 +51,7 @@ export default async function handler(req, res) {
 
     // ---------------------------------------------------------------- SAVE
     if (action === 'save') {
+      requireCap(ctx, 'quotes.edit')
       const meta = body.meta || {}
       const options = Array.isArray(body.options) ? body.options : []
       const total = optionTotals(options)
@@ -84,6 +87,7 @@ export default async function handler(req, res) {
 
     // ---------------------------------------------------------------- SEND
     if (action === 'send') {
+      requireCap(ctx, 'quotes.send')
       const versionId = body.versionId
       const { data: version } = await db.from('quote_versions').select('*').eq('id', versionId).maybeSingle()
       if (!version) return res.status(404).json({ error: 'Version not found' })
@@ -123,6 +127,7 @@ export default async function handler(req, res) {
 
     // -------------------------------------------------------------- REVISE
     if (action === 'revise') {
+      requireCap(ctx, 'quotes.edit')
       const versionId = body.versionId
       const { data: src } = await db.from('quote_versions').select('*').eq('id', versionId).maybeSingle()
       if (!src) return res.status(404).json({ error: 'Version not found' })
@@ -149,6 +154,7 @@ export default async function handler(req, res) {
 
     // ------------------------------------------------------- DELETE VERSION
     if (action === 'delete_version') {
+      requireCap(ctx, 'quotes.edit')
       const { data: v } = await db.from('quote_versions').select('status, version_number').eq('id', body.versionId).maybeSingle()
       if (!v) return res.status(404).json({ error: 'Version not found' })
       if (v.status !== 'draft') return res.status(400).json({ error: 'Only draft quotes can be deleted.' })

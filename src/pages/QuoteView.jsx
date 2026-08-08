@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { publicGet, publicPost } from '../lib/adminApi.js'
 import QuoteDisplay from '../components/quote/QuoteDisplay.jsx'
 import usePageMeta from '../lib/usePageMeta.js'
+import ThemeToggle from '../components/ui/ThemeToggle.jsx'
 
 const RESPONDED = { accept: 'accepted', decline: 'declined', request_changes: 'changes requested' }
 
@@ -44,6 +45,7 @@ export default function QuoteView() {
       <header className="q-header no-print">
         <img src="/assets/img/logo2.png" alt="FlyUp Line" />
         <div className="q-header-actions">
+          <ThemeToggle />
           <button className="btn btn-ghost" onClick={() => window.print()}>Print / Save PDF</button>
         </div>
       </header>

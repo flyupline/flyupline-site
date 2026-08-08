@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { effectivePermissions } from '../lib/permissions.js'
 
 const AuthCtx = createContext(null)
 export const useAuth = () => useContext(AuthCtx)
@@ -7,6 +8,8 @@ export const useAuth = () => useContext(AuthCtx)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [role, setRole] = useState(null)
+  const [permissions, setPermissions] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,11 +21,22 @@ export function AuthProvider({ children }) {
 
     const check = async (s) => {
       if (!s?.user) {
-        if (active) setIsAdmin(false)
+        if (active) {
+          setIsAdmin(false)
+          setRole(null)
+          setPermissions({})
+        }
         return
       }
-      const { data } = await supabase.from('admin_users').select('user_id').eq('user_id', s.user.id).maybeSingle()
-      if (active) setIsAdmin(!!data)
+      const { data } = await supabase
+        .from('admin_users')
+        .select('user_id, role, permissions')
+        .eq('user_id', s.user.id)
+        .maybeSingle()
+      if (!active) return
+      setIsAdmin(!!data)
+      setRole(data?.role || null)
+      setPermissions(data ? effectivePermissions(data.role, data.permissions) : {})
     }
 
     supabase.auth.getSession().then(async ({ data }) => {
@@ -51,8 +65,12 @@ export function AuthProvider({ children }) {
   const sendMagicLink = (email) =>
     supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/admin` } })
 
+  const can = (capability) => Boolean(permissions?.[capability])
+
   return (
-    <AuthCtx.Provider value={{ session, user: session?.user, isAdmin, loading, login, logout, resetPassword, updatePassword, sendMagicLink }}>
+    <AuthCtx.Provider
+      value={{ session, user: session?.user, isAdmin, role, permissions, can, loading, login, logout, resetPassword, updatePassword, sendMagicLink }}
+    >
       {children}
     </AuthCtx.Provider>
   )

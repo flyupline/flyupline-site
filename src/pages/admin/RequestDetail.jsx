@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/adminApi.js'
 import { supabase } from '../../lib/supabase.js'
+import { useAuth } from '../../admin/AuthContext.jsx'
 import { StatusBadge, ALL_STATUSES, STATUS_META, money, fmtDate, fmtDateTime, fromNow } from '../../admin/ui.jsx'
 import FlightQuoteBuilder from '../../admin/FlightQuoteBuilder.jsx'
 import QuoteDisplay from '../../components/quote/QuoteDisplay.jsx'
 import { SITE } from '../../lib/site.js'
 
 export default function RequestDetail() {
+  const { can } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
   const [d, setD] = useState(null)
@@ -71,14 +73,22 @@ export default function RequestDetail() {
           <StatusBadge status={r.status} />
         </div>
         <div className="detail-actions">
-          <select value={r.status} onChange={(e) => act({ action: 'set_status', status: e.target.value })}>
-            {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
-          </select>
-          <button onClick={() => act({ action: 'assign', self: true }, 'assign')} disabled={busy === 'assign'}>Assign to me</button>
-          <button onClick={() => act({ action: 'set_status', status: 'booked' })}>Mark booked</button>
-          <button onClick={() => { if (confirm('Cancel this request?')) act({ action: 'set_status', status: 'cancelled' }) }}>Cancel</button>
-          <button onClick={() => act({ action: 'archive', archived: !r.archived })}>{r.archived ? 'Unarchive' : 'Archive'}</button>
-          <button className="danger" onClick={() => { if (confirm('Permanently delete this request and all its data? This cannot be undone.')) act({ action: 'delete', confirm: true }) }}>Delete</button>
+          {can('requests.manage') ? (
+            <>
+              <select value={r.status} onChange={(e) => act({ action: 'set_status', status: e.target.value })}>
+                {ALL_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+              </select>
+              <button onClick={() => act({ action: 'assign', self: true }, 'assign')} disabled={busy === 'assign'}>Assign to me</button>
+              <button onClick={() => act({ action: 'set_status', status: 'booked' })}>Mark booked</button>
+              <button onClick={() => { if (confirm('Cancel this request?')) act({ action: 'set_status', status: 'cancelled' }) }}>Cancel</button>
+              <button onClick={() => act({ action: 'archive', archived: !r.archived })}>{r.archived ? 'Unarchive' : 'Archive'}</button>
+            </>
+          ) : (
+            <StatusBadge status={r.status} />
+          )}
+          {can('requests.delete') && (
+            <button className="danger" onClick={() => { if (confirm('Permanently delete this request and all its data? This cannot be undone.')) act({ action: 'delete', confirm: true }) }}>Delete</button>
+          )}
         </div>
       </div>
 
@@ -116,6 +126,7 @@ export default function RequestDetail() {
           </section>
 
           <Conversation
+            canSend={can('messages.send')}
             messages={d.messages}
             customerName={r.full_name}
             lastSentAt={sentMessages.length ? sentMessages[sentMessages.length - 1].created_at : null}
@@ -129,7 +140,7 @@ export default function RequestDetail() {
         <aside className="detail-side">
           <section className="panel-card">
             <h3>Customer</h3>
-            <CustomerEditor r={r} onSave={(patch) => act({ action: 'edit_customer', ...patch }, 'cust')} busy={busy === 'cust'} />
+            <CustomerEditor r={r} onSave={(patch) => act({ action: 'edit_customer', ...patch }, 'cust')} busy={busy === 'cust'} canEdit={can('requests.manage')} />
           </section>
 
           <section className="panel-card">
@@ -162,10 +173,12 @@ export default function RequestDetail() {
                 </div>
               ))}
             </div>
-            <div className="msg-compose">
-              <textarea rows={2} placeholder="Add a private note (customers never see this)…" value={note} onChange={(e) => setNote(e.target.value)} />
-              <button className="btn btn-ghost" disabled={!note.trim() || busy === 'note'} onClick={async () => { await act({ action: 'add_note', body: note }, 'note'); setNote('') }}>Add note</button>
-            </div>
+            {can('notes.write') && (
+              <div className="msg-compose">
+                <textarea rows={2} placeholder="Add a private note (customers never see this)…" value={note} onChange={(e) => setNote(e.target.value)} />
+                <button className="btn btn-ghost" disabled={!note.trim() || busy === 'note'} onClick={async () => { await act({ action: 'add_note', body: note }, 'note'); setNote('') }}>Add note</button>
+              </div>
+            )}
           </section>
 
           <section className="panel-card">
@@ -203,7 +216,7 @@ export default function RequestDetail() {
   )
 }
 
-function CustomerEditor({ r, onSave, busy }) {
+function CustomerEditor({ r, onSave, busy, canEdit = true }) {
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState({ full_name: r.full_name || '', email: r.email || '', phone: r.phone || '', preferred_contact: r.preferred_contact || '' })
   if (!edit) {
@@ -215,7 +228,7 @@ function CustomerEditor({ r, onSave, busy }) {
           <dt>Phone</dt><dd>{r.phone || '—'}</dd>
           {r.preferred_contact && <><dt>Prefers</dt><dd>{r.preferred_contact}</dd></>}
         </dl>
-        <button className="btn btn-ghost" onClick={() => setEdit(true)}>Edit details</button>
+        {canEdit && <button className="btn btn-ghost" onClick={() => setEdit(true)}>Edit details</button>}
       </>
     )
   }
@@ -235,7 +248,7 @@ function CustomerEditor({ r, onSave, busy }) {
   )
 }
 
-function Conversation({ messages, customerName, lastSentAt, value, onChange, busy, onSend }) {
+function Conversation({ messages, customerName, lastSentAt, value, onChange, busy, onSend, canSend = true }) {
   // Number each admin message so follow-ups are easy to track.
   let sent = 0
   const numbered = messages.map((m) => (m.sender === 'admin' ? { ...m, n: ++sent } : m))
@@ -265,17 +278,21 @@ function Conversation({ messages, customerName, lastSentAt, value, onChange, bus
           </div>
         ))}
       </div>
-      <div className="msg-compose">
-        <textarea
-          rows={2}
-          placeholder={sent === 0 ? 'Write a message to the customer (sent by email)…' : `Write follow-up ${sent} (sent by email)…`}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        <button className="btn btn-primary" disabled={!value.trim() || busy} onClick={onSend}>
-          {busy ? 'Sending…' : sent === 0 ? 'Send message' : 'Send follow-up'}
-        </button>
-      </div>
+      {canSend ? (
+        <div className="msg-compose">
+          <textarea
+            rows={2}
+            placeholder={sent === 0 ? 'Write a message to the customer (sent by email)…' : `Write follow-up ${sent} (sent by email)…`}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          <button className="btn btn-primary" disabled={!value.trim() || busy} onClick={onSend}>
+            {busy ? 'Sending…' : sent === 0 ? 'Send message' : 'Send follow-up'}
+          </button>
+        </div>
+      ) : (
+        <p className="muted" style={{ fontSize: '0.85rem' }}>Your role cannot message customers.</p>
+      )}
     </section>
   )
 }

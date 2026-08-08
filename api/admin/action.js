@@ -1,6 +1,7 @@
 import { requireAdmin, sendError } from '../../server/auth.js'
 import { logActivity, notify, readBody, SITE_URL } from '../../server/util.js'
 import { sendEmail, shell, esc } from '../../server/email.js'
+import { requireCap } from '../../server/permissions.js'
 
 const STATUSES = new Set([
   'new', 'reviewing', 'waiting_info', 'draft_quote', 'quote_ready', 'quote_sent',
@@ -10,7 +11,8 @@ const STATUSES = new Set([
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
-    const { db, user, adminName } = await requireAdmin(req)
+    const ctx = await requireAdmin(req)
+    const { db, user, adminName } = ctx
     const body = readBody(req)
     const { requestId, action } = body
     if (!requestId || !action) return res.status(400).json({ error: 'Missing requestId or action' })
@@ -20,23 +22,27 @@ export default async function handler(req, res) {
 
     switch (action) {
       case 'set_status': {
+        requireCap(ctx, 'requests.manage')
         if (!STATUSES.has(body.status)) return res.status(400).json({ error: 'Invalid status' })
         await db.from('quote_requests').update({ status: body.status }).eq('id', requestId)
         await logActivity(db, requestId, { action: 'status_changed', actor: 'admin', actorName: adminName, detail: `Status set to ${body.status}` })
         break
       }
       case 'assign': {
+        requireCap(ctx, 'requests.manage')
         const assignee = body.self ? user.id : body.adminId || null
         await db.from('quote_requests').update({ assigned_admin: assignee }).eq('id', requestId)
         await logActivity(db, requestId, { action: 'assigned', actor: 'admin', actorName: adminName, detail: assignee ? `Assigned to ${body.self ? adminName : 'admin'}` : 'Unassigned' })
         break
       }
       case 'archive': {
+        requireCap(ctx, 'requests.manage')
         await db.from('quote_requests').update({ archived: !!body.archived }).eq('id', requestId)
         await logActivity(db, requestId, { action: body.archived ? 'archived' : 'unarchived', actor: 'admin', actorName: adminName })
         break
       }
       case 'edit_customer': {
+        requireCap(ctx, 'requests.manage')
         const patch = {}
         for (const f of ['full_name', 'email', 'phone', 'preferred_contact']) if (f in body) patch[f] = body[f]
         await db.from('quote_requests').update(patch).eq('id', requestId)
@@ -44,12 +50,14 @@ export default async function handler(req, res) {
         break
       }
       case 'add_note': {
+        requireCap(ctx, 'notes.write')
         if (!body.body?.trim()) return res.status(400).json({ error: 'Empty note' })
         await db.from('internal_notes').insert({ request_id: requestId, author_id: user.id, author_name: adminName, body: body.body.trim() })
         await logActivity(db, requestId, { action: 'internal_note_added', actor: 'admin', actorName: adminName, detail: 'Private note' })
         break
       }
       case 'send_message': {
+        requireCap(ctx, 'messages.send')
         if (!body.body?.trim()) return res.status(400).json({ error: 'Empty message' })
         await db.from('messages').insert({ request_id: requestId, sender: 'admin', author_id: user.id, author_name: adminName, body: body.body.trim() })
         await logActivity(db, requestId, { action: 'admin_message_sent', actor: 'admin', actorName: adminName, detail: 'Message to customer' })
@@ -70,6 +78,7 @@ export default async function handler(req, res) {
         break
       }
       case 'delete': {
+        requireCap(ctx, 'requests.delete')
         if (!body.confirm) return res.status(400).json({ error: 'Confirmation required' })
         await db.from('quote_requests').delete().eq('id', requestId)
         return res.status(200).json({ ok: true, deleted: true })

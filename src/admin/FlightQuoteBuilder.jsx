@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiPost } from '../lib/adminApi.js'
+import { useAuth } from './AuthContext.jsx'
 import { CURRENCIES, fromNow } from './ui.jsx'
 import MoneyInput from './MoneyInput.jsx'
 import SegmentEditor from './SegmentEditor.jsx'
@@ -255,6 +256,7 @@ function OptionCard({ option, index, currency, errors, onChange, onDuplicate, on
 
 /* ------------------------------------------------------------------ main */
 export default function FlightQuoteBuilder({ request, versions, options, onRefresh, onReloadHard, onPreview }) {
+  const { can } = useAuth()
   const draft = versions.find((v) => v.status === 'draft')
   const latest = versions[0]
 
@@ -533,7 +535,9 @@ export default function FlightQuoteBuilder({ request, versions, options, onRefre
         <div className="qb-actionbar-btns">
           <button className="btn btn-ghost" onClick={manualSave} disabled={!!busy}>{busy === 'save' ? 'Saving…' : 'Save draft'}</button>
           <button className="btn btn-ghost" onClick={preview}>Preview</button>
-          <button className="btn btn-primary" onClick={() => { setTriedSend(true); if (canSend) setConfirm(true) }} disabled={!!busy}>Send quote</button>
+          {can('quotes.send') && (
+            <button className="btn btn-primary" onClick={() => { setTriedSend(true); if (canSend) setConfirm(true) }} disabled={!!busy}>Send quote</button>
+          )}
         </div>
       </div>
 

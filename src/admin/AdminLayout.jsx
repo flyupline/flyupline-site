@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
 import { apiGet, apiPost } from '../lib/adminApi.js'
 import { fromNow } from './ui.jsx'
-import { cacheQuoteDefaults } from '../pages/admin/Settings.jsx'
+import ThemeToggle from '../components/ui/ThemeToggle.jsx'
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
@@ -27,14 +27,6 @@ export default function AdminLayout() {
   useEffect(() => {
     load()
   }, [load])
-
-  // Pull the workspace quote defaults once so the builder can start new quotes
-  // with the team's settings on any device.
-  useEffect(() => {
-    apiGet('/api/admin/settings')
-      .then((r) => cacheQuoteDefaults(r?.settings?.quote_defaults))
-      .catch(() => {})
-  }, [])
 
   // Realtime: refresh notifications when any change lands.
   useEffect(() => {
@@ -80,6 +72,7 @@ export default function AdminLayout() {
           <NavLink to="/admin/settings" className={({ isActive }) => (isActive ? 'active' : undefined)}>Settings</NavLink>
         </nav>
         <div className="admin-topbar-right">
+          <ThemeToggle />
           <div className="notif" ref={bellRef}>
             <button className="notif-btn" onClick={() => setOpen((o) => !o)} aria-label="Notifications">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
