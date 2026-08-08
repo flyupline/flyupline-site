@@ -659,3 +659,11 @@
   .admin-logout { padding: 6px 10px; font-size: 0.8rem; }
   .admin-nav a { padding: 6px 9px; }
 }
+
+/* On small screens give the nav its own row instead of squeezing everything
+   into one line (prevents clipped tabs / log-out button). */
+@media (max-width: 720px) {
+  .admin-topbar { flex-wrap: wrap; row-gap: 4px; padding-block: 10px; }
+  .admin-nav { order: 3; flex-basis: 100%; margin: 2px 0 0; justify-content: flex-start; }
+  .admin-topbar-right { gap: 10px; }
+}
