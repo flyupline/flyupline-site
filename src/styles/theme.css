@@ -2277,11 +2277,21 @@ h6 {
 :root[data-theme='light'] .set-field textarea,
 :root[data-theme='light'] .admin-toolbar input,
 :root[data-theme='light'] .admin-toolbar select { color-scheme: light; }
+/* Hero + page-hero sit on photography in BOTH themes, so keep the scrim dark
+   and the text light — dark-on-photo would fail contrast. */
 :root[data-theme='light'] .hero-scrim {
-  background: linear-gradient(180deg, rgba(10,10,11,0.45) 0%, rgba(10,10,11,0.28) 45%, var(--bg) 100%),
-              linear-gradient(100deg, rgba(10,10,11,0.6) 0%, rgba(10,10,11,0.08) 60%);
+  background: linear-gradient(180deg, rgba(10,10,11,0.55) 0%, rgba(10,10,11,0.35) 45%, var(--bg) 100%),
+              linear-gradient(100deg, rgba(10,10,11,0.72) 0%, rgba(10,10,11,0.10) 60%);
 }
-:root[data-theme='light'] .page-hero .scrim { background: linear-gradient(180deg, rgba(10,10,11,0.62) 0%, var(--bg) 100%); }
+:root[data-theme='light'] .page-hero .scrim { background: linear-gradient(180deg, rgba(10,10,11,0.72) 0%, var(--bg) 100%); }
+:root[data-theme='light'] .hero-content h1,
+:root[data-theme='light'] .page-hero h1 { color: #ffffff; }
+:root[data-theme='light'] .hero-content .lead,
+:root[data-theme='light'] .page-hero .lead,
+:root[data-theme='light'] .hero-trust li { color: rgba(255, 255, 255, 0.88); }
+:root[data-theme='light'] .page-hero .crumbs { color: rgba(255, 255, 255, 0.7); }
+:root[data-theme='light'] .hero-content h1 .accent { color: #ffb45c; }
+:root[data-theme='light'] .hero-content .eyebrow { color: #ffb45c; }
 :root[data-theme='light'] .dest-card::after { background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.78) 100%); }
 :root[data-theme='light'] .badge-card { background: rgba(255,255,255,0.9); }
 :root[data-theme='light'] .cta-band::before { background: radial-gradient(closest-side, rgba(255,97,0,0.12), transparent 70%); }
